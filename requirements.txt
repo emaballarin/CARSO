@@ -1,5 +1,4 @@
-accelerate>=0.12
 ebtorch>=0.4
-torch>=1.12.1
+torch>=1.10.1
 torchsummary>=1.5.1
-torchvision>=0.13.1
+torchvision>=0.11.2
