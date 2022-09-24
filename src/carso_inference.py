@@ -13,19 +13,25 @@ from training.tooling.data import mnist_dataloader_dispatcher
 
 
 def attack_shorthand(model_arg, shorthand):
-    attack_library = attacks_dispatcher(model_arg, True, True, True, True, True)
+    attack_library = attacks_dispatcher(model_arg, True, True, True, True, True, True)
     if shorthand == "pgdw":
         return attack_library[0]
     if shorthand == "pgds":
         return attack_library[1]
-    if shorthand == "fgsw":
+    if shorthand == "pgdx":
         return attack_library[2]
-    if shorthand == "fgss":
+    if shorthand == "fgsw":
         return attack_library[3]
-    if shorthand == "dflw":
+    if shorthand == "fgss":
         return attack_library[4]
-    if shorthand == "dfls":
+    if shorthand == "fgsx":
         return attack_library[5]
+    if shorthand == "dflw":
+        return attack_library[6]
+    if shorthand == "dfls":
+        return attack_library[7]
+    if shorthand == "dflx":
+        return attack_library[8]
 
 
 def main():
@@ -52,6 +58,12 @@ def main():
         action="store_true",
         default=False,
         help="Attacks the model with a strong(er) epsilon",
+    )
+    parser.add_argument(
+        "--strongest",
+        action="store_true",
+        default=False,
+        help="Attacks the model with the strongest epsilon",
     )
     parser.add_argument(
         "--no-cuda",
@@ -106,6 +118,8 @@ def main():
         strength = "s"
     else:
         strength = "w"
+    if args.strongest:
+        strength = "x"
     attack_clean = attack_shorthand(vanilla_classifier, args.attack + strength)
     attack_adv = attack_shorthand(adversarial_classifier, args.attack + strength)
 

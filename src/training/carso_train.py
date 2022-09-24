@@ -56,7 +56,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     # ---- TRAINING TUNING ----
     TRAIN_BATCHSIZE: int = 128
     TEST_BATCHSIZE: int = 512
-    TRAIN_EPOCHS: int = 60
+    TRAIN_EPOCHS: int = 80
     PRINT_EVERY_NEP = 120
 
     # ---- DATASETS ----
@@ -118,7 +118,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         lr=0.001,
     )
 
-    SCHEDULER = MultiStepLR(OPTIMIZER, milestones=[25, 40, 50], gamma=0.7)
+    SCHEDULER = MultiStepLR(OPTIMIZER, milestones=[30, 40, 50, 60, 70, 75], gamma=0.7)
     INNER_SCHEDULER = None
 
     # ---- ADVERSARY ----

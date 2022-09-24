@@ -7,13 +7,14 @@ from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import LinfPGDAttack
 
 
-def attacks_dispatcher(
+def attacks_dispatcher(  # NOSONAR
     model,
     fgsm: bool = True,
     pgd: bool = True,
     deepfool: bool = False,
     weak: bool = True,
     strong: bool = True,
+    strongest: bool = False,
 ):
     adversaries = []
 
@@ -47,6 +48,21 @@ def attacks_dispatcher(
             )
         )
 
+    if pgd and strongest:
+        adversaries.append(
+            LinfPGDAttack(
+                model,
+                loss_fn=th.nn.CrossEntropyLoss(reduction="sum"),
+                eps=0.5,
+                nb_iter=40,
+                eps_iter=0.01,
+                rand_init=True,
+                clip_min=0.0,
+                clip_max=1.0,
+                targeted=False,
+            )
+        )
+
     if fgsm and weak:
         adversaries.append(
             GradientSignAttack(
@@ -71,6 +87,18 @@ def attacks_dispatcher(
             )
         )
 
+    if fgsm and strongest:
+        adversaries.append(
+            GradientSignAttack(
+                model,
+                loss_fn=th.nn.CrossEntropyLoss(reduction="sum"),
+                eps=0.5,
+                clip_min=0.0,
+                clip_max=1.0,
+                targeted=False,
+            )
+        )
+
     if deepfool and weak:
         adversaries.append(
             DeepfoolLinfAttack(
@@ -89,6 +117,18 @@ def attacks_dispatcher(
                 model,
                 loss_fn=th.nn.CrossEntropyLoss(reduction="sum"),
                 eps=0.3,
+                clip_min=0.0,
+                clip_max=1.0,
+                targeted=False,
+            )
+        )
+
+    if deepfool and strongest:
+        adversaries.append(
+            DeepfoolLinfAttack(
+                model,
+                loss_fn=th.nn.CrossEntropyLoss(reduction="sum"),
+                eps=0.5,
                 clip_min=0.0,
                 clip_max=1.0,
                 targeted=False,
