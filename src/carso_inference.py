@@ -4,9 +4,6 @@
 import argparse
 
 import torch as th
-from advertorch.attacks import DeepfoolLinfAttack
-from advertorch.attacks import GradientSignAttack
-from advertorch.attacks import LinfPGDAttack
 from inference.tooling.carso_infer import carso_ensembled_infer
 from training.tooling.architectures import compressor_dispatcher
 from training.tooling.architectures import fcn_carso_dispatcher
@@ -113,10 +110,13 @@ def main():
     attack_adv = attack_shorthand(adversarial_classifier, args.attack + strength)
 
     # ---- RESULT STORE ----
+    NUMBER_OF_ELEM = 0
     VANILLA_CORRECT = 0
+    VANILLA_ADV_CORRECT = 0
     ADVERSARIAL_CLEAN_CORRECT = 0
     ADVERSARIAL_ATTACKED_CORRECT = 0
     CARSO_CORRECT = 0
+    CARSO_ADV_CORRECT = 0
 
     # ---- TESTING LOOP ----
     for _, batched_datapoint in enumerate(test_dl):
@@ -152,14 +152,20 @@ def main():
                 repr_funnel,
                 carso_decoder,
                 true_data,
+                36,
+                ["2.module_battery.1", "2.module_battery.5", "2.module_battery.9"],
                 args.ensemble_size,
+                device,
             )
             carso_pertu_class = carso_ensembled_infer(
                 adversarial_classifier,
                 repr_funnel,
                 carso_decoder,
                 fake_data_adv,
+                36,
+                ["2.module_battery.1", "2.module_battery.5", "2.module_battery.9"],
                 args.ensemble_size,
+                device,
             )
 
             # Prepare true / vanilla classes for comparison

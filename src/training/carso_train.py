@@ -147,13 +147,13 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         # Inner loop
         for batch_idx, batched_datapoint in enumerate(train_dl):
 
-            data, target = batched_datapoint
-            data, target = data.to(device), target.to(device)  # Before the attack
-
-            old_data = data.detach()  # Copy unperturbed input
-
             # Attack loop
             for adversary_idx in range(len(adversaries) + 1):
+
+                data, target = batched_datapoint
+                data, target = data.to(device), target.to(device)  # Before the attack
+
+                old_data = data.detach()  # Copy unperturbed input
 
                 if adversary_idx > 0:
                     data = (
@@ -164,59 +164,65 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
 
                 data, target = data.to(device), target.to(device)  # After the attack
 
-            # Extract representation
-            with th.no_grad():
-                _, class_repr, _ = gather_model_repr(
-                    vanilla_classifier,
-                    data,
-                    device,
-                    ["2.module_battery.1", "2.module_battery.5", "2.module_battery.9"],
-                    preserve_graph=False,
+                # Extract representation
+                with th.no_grad():
+                    _, class_repr, _ = gather_model_repr(
+                        vanilla_classifier,
+                        data,
+                        device,
+                        [
+                            "2.module_battery.1",
+                            "2.module_battery.5",
+                            "2.module_battery.9",
+                        ],
+                        preserve_graph=False,
+                    )
+                    del _
+
+                # Prepare for the next stage
+                data.requires_grad_(True)
+                class_repr.requires_grad_(True)
+
+                # Record gradients from here
+                OPTIMIZER.zero_grad()
+
+                # Input encoding
+                compress_input: Tensor = input_funnel(mnist_data_prep(data))
+
+                # Representation encoding
+                compress_repr: Tensor = repr_funnel(class_repr)
+
+                # Training loop for CVAE
+
+                # ENC
+                cvae_input = th.cat((compress_input, compress_repr), dim=1)
+                cvae_neck_out = carso_enc_neck(cvae_input)
+                cvae_mu, cvae_sigma = (
+                    carso_enc_mu(cvae_neck_out),
+                    carso_enc_sigma(cvae_neck_out),
                 )
-                del _
 
-            # Prepare for the next stage
-            data.requires_grad_(True)
-            class_repr.requires_grad_(True)
+                cvae_enc = gauss_rp_sampler(cvae_mu, cvae_sigma)
 
-            # Record gradients from here
-            OPTIMIZER.zero_grad()
+                # DEC
+                cvae_dec_input = th.cat((cvae_enc, compress_repr), dim=1)
+                input_reco = carso_dec(cvae_dec_input)
 
-            # Input encoding
-            compress_input: Tensor = input_funnel(mnist_data_prep(data))
+                # Compute loss
+                kldiv = (
+                    0.5 * (cvae_mu**2 + th.exp(cvae_sigma) - cvae_sigma - 1)
+                ).sum()
+                pwbce = pixelwise_bce_sum(input_reco, old_data.flatten(start_dim=1))
+                loss = kldiv + pwbce
+                loss.backward()
 
-            # Representation encoding
-            compress_repr: Tensor = repr_funnel(class_repr)
+                # Optimize
+                OPTIMIZER.step()
+                if INNER_SCHEDULER is not None:  # NOSONAR
+                    INNER_SCHEDULER.step()
 
-            # Training loop for CVAE
-
-            # ENC
-            cvae_input = th.cat((compress_input, compress_repr), dim=1)
-            cvae_neck_out = carso_enc_neck(cvae_input)
-            cvae_mu, cvae_sigma = (
-                carso_enc_mu(cvae_neck_out),
-                carso_enc_sigma(cvae_neck_out),
-            )
-
-            cvae_enc = gauss_rp_sampler(cvae_mu, cvae_sigma)
-
-            # DEC
-            cvae_dec_input = th.cat((cvae_enc, compress_repr), dim=1)
-            input_reco = carso_dec(cvae_dec_input)
-
-            # Compute loss
-            kldiv = (0.5 * (cvae_mu**2 + th.exp(cvae_sigma) - cvae_sigma - 1)).sum()
-            pwbce = pixelwise_bce_sum(input_reco, old_data.flatten(start_dim=1))
-            loss = kldiv + pwbce
-            loss.backward()
-
-            # Optimize
-            OPTIMIZER.step()
-            if INNER_SCHEDULER is not None:  # NOSONAR
-                INNER_SCHEDULER.step()
-
-            # Track stats
-            train_acc_avgmeter.update(loss.item())
+                # Track stats
+                train_acc_avgmeter.update(loss.item())
 
             # Print
             if not args.quiet and batch_idx % PRINT_EVERY_NEP == 0:
@@ -224,8 +230,8 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_dl.dataset)} ({100.0 * batch_idx / len(train_dl)}%)]\tAverage {train_acc_avgmeter.avg}: {loss.item()}"
                 )
 
-    # Out of epoch
-    SCHEDULER.step()
+        # Out of epoch
+        SCHEDULER.step()
 
     if args.save_model:
         th.save(
