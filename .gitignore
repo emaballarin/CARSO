@@ -261,4 +261,4 @@ typeshed/
 
 # PyTorch pickled objects
 *.pt
-*.pth
+!*.pth
