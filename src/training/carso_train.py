@@ -68,7 +68,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     del _
 
     vanilla_classifier = mnistfcn_dispatcher()
-    vanilla_classifier.load_state_dict(th.load("../../models/mnistfcn_clean.pth"))
+    vanilla_classifier.load_state_dict(th.load("../../models/mnistfcn_adv.pth"))
 
     mnist_data_prep = mnist_data_prep_dispatcher()
     input_funnel = compressor_dispatcher(28 * 28, 28 * 28 // 4)
