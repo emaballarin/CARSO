@@ -42,9 +42,9 @@ def main():
     parser.add_argument(
         "--ensemble_size",
         type=int,
-        default=1000,
+        default=1500,
         metavar="N",
-        help="Number of voters in the ensemble (default: 1000)",
+        help="Number of voters in the ensemble (default: 1500)",
     )
     parser.add_argument(
         "--attack",
@@ -63,7 +63,7 @@ def main():
         "--strongest",
         action="store_true",
         default=False,
-        help="Attacks the model with the strongest epsilon",
+        help="Attacks the model with the strongest epsilon; overrides all other strength specifications",
     )
     parser.add_argument(
         "--no-cuda",
@@ -161,13 +161,18 @@ def main():
                 dim=1, keepdim=True
             )
             # Classify with CARSO
+            repr_layers = (
+                "2.module_battery.1",
+                "2.module_battery.5",
+                "2.module_battery.9",
+            )
             carso_clean_class = carso_ensembled_infer(
                 adversarial_classifier,
                 repr_funnel,
                 carso_decoder,
                 true_data,
                 36,
-                ["2.module_battery.1", "2.module_battery.5", "2.module_battery.9"],
+                list(repr_layers),
                 args.ensemble_size,
                 device,
             )
@@ -177,7 +182,7 @@ def main():
                 carso_decoder,
                 fake_data_adv,
                 36,
-                ["2.module_battery.1", "2.module_battery.5", "2.module_battery.9"],
+                list(repr_layers),
                 args.ensemble_size,
                 device,
             )

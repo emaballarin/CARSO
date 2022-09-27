@@ -3,6 +3,7 @@
 # ---- IMPORTS ----
 import argparse
 
+import neptune.new as neptune
 import torch as th
 import torch.nn.functional as F
 from ebtorch.logging import AverageMeter
@@ -17,7 +18,7 @@ from tooling.loops import train_epoch
 from torch.optim.lr_scheduler import MultiStepLR
 
 
-def main():  # pylint: disable=too-many-locals
+def main():  # pylint: disable=too-many-locals # NOSONAR
     # Argument parsing...
     parser = argparse.ArgumentParser(description="FCN on MNIST training")
     parser.add_argument(
@@ -44,7 +45,23 @@ def main():  # pylint: disable=too-many-locals
         default=False,
         help="Save model after training",
     )
+    parser.add_argument(
+        "--neptune_log",
+        action="store_true",
+        default=False,
+        help="Log selected metdata to neptune.ai",
+    )
     args = parser.parse_args()
+
+    # ---- NEPTUNE ----
+    if args.neptune_log:
+        run_tags = ["MNIST", "FCN"]
+        if args.attack:
+            run_tags.append("adversarial")
+        else:
+            run_tags.append("clean")
+
+        run = neptune.init_run(project="emaballarin/CARSO", tags=run_tags)
 
     # ---- DEVICE HANDLING ----
     use_cuda = not args.no_cuda and th.cuda.is_available()
@@ -58,10 +75,34 @@ def main():  # pylint: disable=too-many-locals
     # ---- TRAINING TUNING ----
     TRAIN_BATCHSIZE: int = 128
     TEST_BATCHSIZE: int = 512
-    TRAIN_EPOCHS: int = 50
+    TRAIN_EPOCHS: int = 60
     LOSSFN = F.nll_loss
     OPTIMIZER = RAdam(model.parameters(), lr=1e-2)
-    SCHEDULER = MultiStepLR(OPTIMIZER, milestones=[15, 20, 25, 30, 40, 45], gamma=0.5)
+    SCHEDULER = MultiStepLR(OPTIMIZER, milestones=[15, 20, 25, 30, 40, 50], gamma=0.5)
+
+    run_params = {
+        "epoch_nr": TRAIN_EPOCHS,
+        "batch_size": TRAIN_BATCHSIZE,
+        "optimizer": "RAdam",
+        "lr": 1e-2,
+        "scheduler": "MultiStepLR",
+        "scheduler_milestones": [15, 20, 25, 30, 40, 50],
+        "scheduler_gamma": 0.5,
+        "loss_fn": "nll_loss",
+        "architecture": "FCN",
+        "architecture_params": {
+            "input_size": 784,
+            "hidden_sizes": (200, 80),
+            "output_size": 10,
+            "dropout": (0.15, 0.15, 0.0),
+            "activations": "mish",
+            "gating": "log_softmax",
+            "batchnorm": (True, True, False),
+            "bias": True,
+            "data_normalization": {"mean": 0.1307, "std": 0.3081},
+        },
+    }
+    run["parameters"] = run_params
 
     # ---- DATASETS ----
     train_dl, test_dl, totr_dl = mnist_dataloader_dispatcher(
@@ -110,11 +151,17 @@ def main():  # pylint: disable=too-many-locals
         print("\n")
         print("TESTING...")
         print("\nON TRAINING SET:")
-        _ = test(model, device, totr_dl, LOSSFN, totr_acc_avgmeter, quiet=False)
-        del _
+        train_l, train_a = test(
+            model, device, totr_dl, LOSSFN, totr_acc_avgmeter, quiet=False
+        )
+        run["train/loss"].log(train_l)
+        run["train/accuracy"].log(train_a)
         print("\nON TEST SET:")
-        _ = test(model, device, test_dl, LOSSFN, test_acc_avgmeter, quiet=False)
-        del _
+        test_l, test_a = test(
+            model, device, test_dl, LOSSFN, test_acc_avgmeter, quiet=False
+        )
+        run["test/loss"].log(test_l)
+        run["test/accuracy"].log(test_a)
         print("\n\n\n")
 
         # Tweaks for the Lookahead optimizer (after testing)
@@ -125,8 +172,13 @@ def main():  # pylint: disable=too-many-locals
         SCHEDULER.step()
 
     # ---- SAVE MODEL ----
-    if args.save_model:
-        th.save(model.state_dict(), "../../models/mnistfcn_" + namepiece + ".pth")
+    if args.save_model or args.log:
+        model_namepath = f"../../models/mnist_fcn_{namepiece}.pth"
+        th.save(model.state_dict(), model_namepath)
+
+    if args.neptune_log:
+        run["model_weights"].upload(model_namepath)
+        run.stop()
 
 
 # Run!
