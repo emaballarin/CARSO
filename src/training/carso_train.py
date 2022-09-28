@@ -264,16 +264,15 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
                 # Track stats
                 train_acc_avgmeter.update(loss.item())
 
-            # Log
-            if args.neptunelog:
-                run["train/loss"].log(loss.item())
             # Print
             if not args.quiet and batch_idx % PRINT_EVERY_NEP == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_dl.dataset)} ({100.0 * batch_idx / len(train_dl)}%)]\tAverage {train_acc_avgmeter.avg}: {loss.item()}"
                 )
 
-        # Out of epoch
+        # Every epoch
+        if args.neptunelog:
+            run["train/loss"].log(loss.item())
         SCHEDULER.step()
 
     if args.save_model or args.neptunelog:
