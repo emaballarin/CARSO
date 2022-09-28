@@ -18,7 +18,7 @@ from tooling.loops import train_epoch
 from torch.optim.lr_scheduler import MultiStepLR
 
 
-def main():  # pylint: disable=too-many-locals # NOSONAR
+def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
     # Argument parsing...
     parser = argparse.ArgumentParser(description="FCN on MNIST training")
     parser.add_argument(
@@ -46,7 +46,7 @@ def main():  # pylint: disable=too-many-locals # NOSONAR
         help="Save model after training",
     )
     parser.add_argument(
-        "--neptune_log",
+        "--neptunelog",
         action="store_true",
         default=False,
         help="Log selected metdata to neptune.ai",
@@ -54,7 +54,7 @@ def main():  # pylint: disable=too-many-locals # NOSONAR
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
-    if args.neptune_log:
+    if args.neptunelog:
         run_tags = ["MNIST", "FCN"]
         if args.attack:
             run_tags.append("adversarial")
@@ -80,29 +80,30 @@ def main():  # pylint: disable=too-many-locals # NOSONAR
     OPTIMIZER = RAdam(model.parameters(), lr=1e-2)
     SCHEDULER = MultiStepLR(OPTIMIZER, milestones=[15, 20, 25, 30, 40, 50], gamma=0.5)
 
-    run_params = {
-        "epoch_nr": TRAIN_EPOCHS,
-        "batch_size": TRAIN_BATCHSIZE,
-        "optimizer": "RAdam",
-        "lr": 1e-2,
-        "scheduler": "MultiStepLR",
-        "scheduler_milestones": [15, 20, 25, 30, 40, 50],
-        "scheduler_gamma": 0.5,
-        "loss_fn": "nll_loss",
-        "architecture": "FCN",
-        "architecture_params": {
-            "input_size": 784,
-            "hidden_sizes": (200, 80),
-            "output_size": 10,
-            "dropout": (0.15, 0.15, 0.0),
-            "activations": "mish",
-            "gating": "log_softmax",
-            "batchnorm": (True, True, False),
-            "bias": True,
-            "data_normalization": {"mean": 0.1307, "std": 0.3081},
-        },
-    }
-    run["parameters"] = run_params
+    if args.neptunelog:
+        run_params = {
+            "epoch_nr": TRAIN_EPOCHS,
+            "batch_size": TRAIN_BATCHSIZE,
+            "optimizer": "RAdam",
+            "lr": 1e-2,
+            "scheduler": "MultiStepLR",
+            "scheduler_milestones": [15, 20, 25, 30, 40, 50],
+            "scheduler_gamma": 0.5,
+            "loss_fn": "nll_loss",
+            "architecture": "FCN",
+            "architecture_params": {
+                "input_size": 784,
+                "hidden_sizes": (200, 80),
+                "output_size": 10,
+                "dropout": (0.15, 0.15, 0.0),
+                "activations": "mish",
+                "gating": "log_softmax",
+                "batchnorm": (True, True, False),
+                "bias": True,
+                "data_normalization": {"mean": 0.1307, "std": 0.3081},
+            },
+        }
+        run["parameters"] = run_params
 
     # ---- DATASETS ----
     train_dl, test_dl, totr_dl = mnist_dataloader_dispatcher(
@@ -172,11 +173,11 @@ def main():  # pylint: disable=too-many-locals # NOSONAR
         SCHEDULER.step()
 
     # ---- SAVE MODEL ----
-    if args.save_model or args.log:
+    if args.save_model or args.neptunelog:
         model_namepath = f"../../models/mnist_fcn_{namepiece}.pth"
         th.save(model.state_dict(), model_namepath)
 
-    if args.neptune_log:
+    if args.neptunelog:
         run["model_weights"].upload(model_namepath)
         run.stop()
 

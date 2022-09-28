@@ -3,6 +3,7 @@
 # ---- IMPORTS ----
 import argparse
 
+import neptune.new as neptune
 import torch as th
 from ebtorch.logging import AverageMeter
 from ebtorch.nn import GaussianReparameterizerSampler
@@ -47,7 +48,23 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         default=False,
         help="Save model after training",
     )
+    parser.add_argument(
+        "--neptunelog",
+        action="store_true",
+        default=False,
+        help="Log selected metdata to neptune.ai",
+    )
     args = parser.parse_args()
+
+    # ---- NEPTUNE ----
+    if args.neptunelog:
+        run_tags = ["MNIST", "CARSO"]
+        if args.attack:
+            run_tags.append("adversarial")
+        else:
+            run_tags.append("clean")
+
+        run = neptune.init_run(project="emaballarin/CARSO", tags=run_tags)
 
     # ---- DEVICE HANDLING ----
     use_cuda = not args.no_cuda and th.cuda.is_available()
@@ -68,7 +85,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     del _
 
     vanilla_classifier = mnistfcn_dispatcher()
-    vanilla_classifier.load_state_dict(th.load("../../models/mnistfcn_adv.pth"))
+    vanilla_classifier.load_state_dict(th.load("../../models/mnist_fcn_adv.pth"))
 
     mnist_data_prep = mnist_data_prep_dispatcher()
     input_funnel = compressor_dispatcher(28 * 28, 28 * 28 // 4)
@@ -133,6 +150,27 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
 
     # ---- TRAINING STATISTICS ----
     train_acc_avgmeter = AverageMeter("batchwise training loss")
+
+    if args.neptunelog:
+        run_params = {
+            "epoch_nr": TRAIN_EPOCHS,
+            "batch_size": TRAIN_BATCHSIZE,
+            "optimizer": "RAdam",
+            "lr": 0.001,
+            "scheduler": "MultiStepLR",
+            "scheduler_milestones": [30, 40, 50, 60, 70, 75, 95],
+            "scheduler_gamma": 0.7,
+            "loss_fn": "pixelwise_bce_sum + KLDiv",
+            "architecture": "CARSO-FCN",
+            "architecture_params": "see entrypoint file",
+            "represented_layers": (
+                "2.module_battery.1",
+                "2.module_battery.5",
+                "2.module_battery.9",
+            ),
+            "trained_attacks": ("fgsw", "fgss", "pgdw", "pgds"),
+        }
+        run["parameters"] = run_params
 
     # ---- TRAINING LOOP (FULL) ----
     for epoch in range(1, TRAIN_EPOCHS + 1):
@@ -226,6 +264,9 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
                 # Track stats
                 train_acc_avgmeter.update(loss.item())
 
+            # Log
+            if args.neptunelog:
+                run["train/loss"].log(loss.item())
             # Print
             if not args.quiet and batch_idx % PRINT_EVERY_NEP == 0:
                 print(
@@ -235,11 +276,18 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         # Out of epoch
         SCHEDULER.step()
 
-    if args.save_model:
+    if args.save_model or args.neptunelog:
+        model_namepath_funnel = f"../../models/repr_funnel_{namepiece}.pth"
+        model_namepath_dec = f"../../models/carso_dec_{namepiece}.pth"
         th.save(
-            repr_funnel.state_dict(), "../../models/repr_funnel_" + namepiece + ".pth"
+            repr_funnel.state_dict(),
+            model_namepath_funnel,
         )
-        th.save(carso_dec.state_dict(), "../../models/carso_dec_" + namepiece + ".pth")
+        th.save(carso_dec.state_dict(), model_namepath_dec)
+    if args.neptunelog:
+        run["model_weights_funnel"].upload(model_namepath_funnel)
+        run["model_weights_dec"].upload(model_namepath_dec)
+        run.stop()
 
 
 # Run!

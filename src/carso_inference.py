@@ -98,8 +98,8 @@ def main():
     del _
 
     # Load pre-trained models
-    vanilla_classifier.load_state_dict(th.load("../models/mnistfcn_clean.pth"))
-    adversarial_classifier.load_state_dict(th.load("../models/mnistfcn_adv.pth"))
+    vanilla_classifier.load_state_dict(th.load("../models/mnist_fcn_clean.pth"))
+    adversarial_classifier.load_state_dict(th.load("../models/mnist_fcn_adv.pth"))
     repr_funnel.load_state_dict(th.load("../models/repr_funnel_adv.pth"))
     carso_decoder.load_state_dict(th.load("../models/carso_dec_adv.pth"))
 
