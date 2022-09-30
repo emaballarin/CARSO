@@ -291,6 +291,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
 
         # Every epoch
         if args.neptunelog:
+            run["train/lr"].log(OPTIMIZER.param_groups[0]["lr"])
             run["train/loss"].log(loss.item())
 
         if args.autolr:

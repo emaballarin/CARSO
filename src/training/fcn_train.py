@@ -183,6 +183,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         train_l, train_a = test(
             model, device, totr_dl, LOSSFN, totr_acc_avgmeter, quiet=False
         )
+        run["train/lr"].log(OPTIMIZER.param_groups[0]["lr"])
         run["train/loss"].log(train_l)
         run["train/accuracy"].log(train_a)
         print("\nON TEST SET:")

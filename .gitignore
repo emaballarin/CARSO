@@ -262,3 +262,6 @@ typeshed/
 # PyTorch pickled objects
 *.pt
 !*.pth
+
+# neptune.ai local files
+.neptune/
