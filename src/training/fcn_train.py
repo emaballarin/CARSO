@@ -98,9 +98,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
             mode="max",
             factor=0.5,
             patience=4,
-            cooldown=1,
-            threshold_mode="abs",
-            threshold=0.0001,
+            cooldown=2,
             verbose=True,
         )
     else:
