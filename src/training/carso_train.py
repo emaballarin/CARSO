@@ -19,6 +19,7 @@ from tooling.attacks import attacks_dispatcher
 from tooling.data import mnist_dataloader_dispatcher
 from torch import Tensor
 from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
@@ -54,6 +55,12 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         default=False,
         help="Log selected metdata to neptune.ai",
     )
+    parser.add_argument(
+        "--autolr",
+        action="store_true",
+        default=False,
+        help="Automatically schedule learning rate to be recuded on plateau",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
@@ -71,9 +78,16 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     device = th.device("cuda" if use_cuda else "cpu")
 
     # ---- TRAINING TUNING ----
-    TRAIN_BATCHSIZE: int = 128
+    TRAIN_BATCHSIZE: int = 256
     TEST_BATCHSIZE: int = 512
-    TRAIN_EPOCHS: int = 100
+
+    if args.autolr:
+        TRAIN_EPOCHS: int = 300
+        startlr = 0.0075
+    else:
+        TRAIN_EPOCHS: int = 100
+        startlr = 0.001
+
     PRINT_EVERY_NEP = 120
 
     # ---- DATASETS ----
@@ -132,12 +146,17 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         + list(carso_enc_sigma.parameters())
         + list(carso_dec.parameters())
         + list(gauss_rp_sampler.parameters()),
-        lr=0.001,
+        lr=startlr,
     )
 
-    SCHEDULER = MultiStepLR(
-        OPTIMIZER, milestones=[30, 40, 50, 60, 70, 75, 95], gamma=0.7
-    )
+    if args.autolr:
+        SCHEDULER = ReduceLROnPlateau(
+            OPTIMIZER, mode="min", factor=0.7, patience=8, cooldown=2, verbose=True
+        )
+    else:
+        SCHEDULER = MultiStepLR(
+            OPTIMIZER, milestones=[30, 40, 50, 60, 70, 75, 95], gamma=0.7
+        )
     INNER_SCHEDULER = None
 
     # ---- ADVERSARY ----
@@ -157,7 +176,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
             "batch_size": TRAIN_BATCHSIZE,
             "optimizer": "RAdam",
             "lr": 0.001,
-            "scheduler": "MultiStepLR",
+            "scheduler": SCHEDULER.__class__.__name__,
             "scheduler_milestones": [30, 40, 50, 60, 70, 75, 95],
             "scheduler_gamma": 0.7,
             "loss_fn": "pixelwise_bce_sum + KLDiv",
@@ -273,7 +292,11 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         # Every epoch
         if args.neptunelog:
             run["train/loss"].log(loss.item())
-        SCHEDULER.step()
+
+        if args.autolr:
+            SCHEDULER.step(loss.item())
+        else:
+            SCHEDULER.step()  # pylint: disable=no-value-for-parameter
 
     if args.save_model or args.neptunelog:
         model_namepath_funnel = f"../../models/repr_funnel_{namepiece}.pth"

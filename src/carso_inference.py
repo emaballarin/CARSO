@@ -82,7 +82,7 @@ def main():
 
     # ---- DATASETS ----
     _, test_dl, _ = mnist_dataloader_dispatcher(
-        batch_size_train=128,
+        batch_size_train=256,
         batch_size_test=TEST_BATCHSIZE,
         cuda_accel=bool(device == th.device("cuda")),
     )

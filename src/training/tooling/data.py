@@ -16,7 +16,7 @@ path_type = Union[str, bytes, int, pathlibPath]
 
 def mnist_dataloader_dispatcher(
     data_root: path_type = "../../datasets/",
-    batch_size_train: int = 128,
+    batch_size_train: int = 256,
     batch_size_test: int = 512,
     cuda_accel: bool = False,
     dataset_kwargs: Optional[dict] = None,
