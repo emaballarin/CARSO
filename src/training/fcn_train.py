@@ -97,7 +97,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
             OPTIMIZER,
             mode="max",
             factor=0.5,
-            patience=4,
+            patience=10,
             cooldown=2,
             verbose=True,
         )

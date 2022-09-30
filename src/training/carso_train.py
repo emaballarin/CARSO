@@ -151,7 +151,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
 
     if args.autolr:
         SCHEDULER = ReduceLROnPlateau(
-            OPTIMIZER, mode="min", factor=0.7, patience=8, cooldown=2, verbose=True
+            OPTIMIZER, mode="min", factor=0.7, patience=20, cooldown=2, verbose=True
         )
     else:
         SCHEDULER = MultiStepLR(
