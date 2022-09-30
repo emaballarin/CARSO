@@ -206,7 +206,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
 
     # ---- SAVE MODEL ----
     if args.save_model or args.neptunelog:
-        model_namepath = f"../../models/mnist_fcn_{namepiece}.pth"
+        model_namepath = f"../models/mnist_fcn_{namepiece}.pth"
         th.save(model.state_dict(), model_namepath)
 
     if args.neptunelog:

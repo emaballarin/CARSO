@@ -10,12 +10,9 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import Compose
 from torchvision.transforms import ToTensor
 
-# Custom path type
-path_type = Union[str, bytes, int, pathlibPath]
-
 
 def mnist_dataloader_dispatcher(
-    data_root: path_type = "../../datasets/",
+    data_root: str = "../datasets/",
     batch_size_train: int = 256,
     batch_size_test: int = 512,
     cuda_accel: bool = False,

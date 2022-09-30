@@ -99,7 +99,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     del _
 
     vanilla_classifier = mnistfcn_dispatcher()
-    vanilla_classifier.load_state_dict(th.load("../../models/mnist_fcn_adv.pth"))
+    vanilla_classifier.load_state_dict(th.load("../models/mnist_fcn_adv.pth"))
 
     mnist_data_prep = mnist_data_prep_dispatcher()
     input_funnel = compressor_dispatcher(28 * 28, 28 * 28 // 4)
@@ -300,8 +300,8 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
             SCHEDULER.step()  # pylint: disable=no-value-for-parameter
 
     if args.save_model or args.neptunelog:
-        model_namepath_funnel = f"../../models/repr_funnel_{namepiece}.pth"
-        model_namepath_dec = f"../../models/carso_dec_{namepiece}.pth"
+        model_namepath_funnel = f"../models/repr_funnel_{namepiece}.pth"
+        model_namepath_dec = f"../models/carso_dec_{namepiece}.pth"
         th.save(
             repr_funnel.state_dict(),
             model_namepath_funnel,
