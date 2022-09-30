@@ -96,9 +96,9 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         SCHEDULER = ReduceLROnPlateau(
             OPTIMIZER,
             mode="max",
-            factor=0.5,
-            patience=10,
-            cooldown=2,
+            factor=0.6,
+            patience=7,
+            cooldown=1,
             verbose=True,
         )
     else:
@@ -198,7 +198,10 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
 
         # Scheduling step (outer)
         if args.autolr:
-            SCHEDULER.step(train_l)
+            if args.attack:
+                SCHEDULER.step(train_l)
+            else:
+                SCHEDULER.step(train_a)
         else:
             SCHEDULER.step()  # pylint: disable=no-value-for-parameter
 
