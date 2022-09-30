@@ -198,7 +198,10 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
 
         # Scheduling step (outer)
         if args.autolr:
-            SCHEDULER.step(train_l)
+            if args.attack:
+                SCHEDULER.step(train_l)
+            else:
+                SCHEDULER.step(train_a)
         else:
             SCHEDULER.step()  # pylint: disable=no-value-for-parameter
 
