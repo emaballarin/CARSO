@@ -58,6 +58,12 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         default=False,
         help="Automatically schedule learning rate to be recuded on plateau",
     )
+    parser.add_argument(
+        "--kwta",
+        action="store_true",
+        default=False,
+        help="Use the kWTA activation function (instead of Mish)",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
@@ -75,9 +81,10 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
     device = th.device("cuda" if use_cuda else "cpu")
 
     # ---- MODEL DEFINITION / INSTANTIATION ----
-    model = mnistfcn_dispatcher(device=device)
-    for layer in model.modules():
-        mishlayer_init(layer)
+    model = mnistfcn_dispatcher(device=device, use_kwta=(True if args.kwta else False))
+    if not args.kwta:
+        for layer in model.modules():
+            mishlayer_init(layer)
 
     # ---- TRAINING TUNING ----
     TRAIN_BATCHSIZE: int = 256
@@ -122,7 +129,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
                 "hidden_sizes": (200, 80),
                 "output_size": 10,
                 "dropout": (0.15, 0.15, 0.0),
-                "activations": "mish",
+                "activations": ("mish" if not args.kwta else "kWTA"),
                 "gating": "log_softmax",
                 "batchnorm": (True, True, False),
                 "bias": True,

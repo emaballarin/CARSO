@@ -61,6 +61,12 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         default=False,
         help="Automatically schedule learning rate to be recuded on plateau",
     )
+    parser.add_argument(
+        "--kwta",
+        action="store_true",
+        default=False,
+        help="Use the kWTA activation function (instead of Mish)",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
@@ -98,12 +104,14 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     )
     del _
 
-    vanilla_classifier = mnistfcn_dispatcher()
+    vanilla_classifier = mnistfcn_dispatcher(
+        device=device, use_kwta=(True if args.kwta else False)
+    )
     vanilla_classifier.load_state_dict(th.load("../models/mnist_fcn_adv.pth"))
 
-    mnist_data_prep = mnist_data_prep_dispatcher()
-    input_funnel = compressor_dispatcher(28 * 28, 28 * 28 // 4)
-    repr_funnel = compressor_dispatcher(290, 290 // 5)
+    mnist_data_prep = mnist_data_prep_dispatcher(device=device)
+    input_funnel = compressor_dispatcher(28 * 28, 28 * 28 // 4, device=device)
+    repr_funnel = compressor_dispatcher(290, 290 // 5, device=device)
 
     carso_enc_neck, carso_enc_mu, carso_enc_sigma, carso_dec = fcn_carso_dispatcher(
         28 * 28 // 4,

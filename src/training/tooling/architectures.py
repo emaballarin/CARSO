@@ -4,6 +4,7 @@ from typing import Optional
 
 from ebtorch.nn import FCBlock
 from ebtorch.nn import FieldTransform
+from ebtorch.nn import KWTA1d
 from torch.nn import Flatten
 from torch.nn import functional as F
 from torch.nn import LeakyReLU
@@ -26,7 +27,7 @@ def pixelwise_bce_mean(lhs, rhs):
 
 
 # ---- MNIST FCN CLASSIFIER DIspatcher ----
-def mnistfcn_dispatcher(device=None):
+def mnistfcn_dispatcher(device=None, use_kwta=False):
     mnistfcn = Sequential(
         FieldTransform(pre_sum=-0.1307, mult_div=0.3081, div_not_mul=True),
         Flatten(),
@@ -34,8 +35,18 @@ def mnistfcn_dispatcher(device=None):
             in_sizes=(28 * 28, 200, 80),
             out_size=10,
             bias=True,
-            activation_fx=ModuleList(modules=(Mish(), Mish(), Mish())),
-            dropout=[0.15, 0.15, False],
+            activation_fx=(
+                ModuleList(modules=(Mish(), Mish(), Mish()))
+                if not use_kwta
+                else ModuleList(
+                    modules=(
+                        KWTA1d(largest=True, absolute=True, ratio=0.34),
+                        KWTA1d(largest=True, absolute=True, ratio=0.25),
+                        KWTA1d(largest=True, absolute=True, ratio=0.2),
+                    )
+                )
+            ),
+            dropout=([0.15, 0.15, False] if not use_kwta else [False, False, False]),
             batchnorm=[True, True, False],
         ),
         LogSoftmax(dim=1),

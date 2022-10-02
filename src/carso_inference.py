@@ -71,6 +71,12 @@ def main():
         default=False,
         help="Disables CUDA acceleration during training",
     )
+    parser.add_argument(
+        "--kwta",
+        action="store_true",
+        default=False,
+        help="Use the kWTA activation function (instead of Mish)",
+    )
     args = parser.parse_args()
 
     # Inference constants
@@ -89,11 +95,20 @@ def main():
     del _
 
     # ---- MODEL DEFINITION / INSTANTIATION ----
-    vanilla_classifier = mnistfcn_dispatcher()
-    adversarial_classifier = mnistfcn_dispatcher()
-    repr_funnel = compressor_dispatcher(290, 290 // 5)
+    vanilla_classifier = mnistfcn_dispatcher(
+        device=device, use_kwta=(True if args.kwta else False)
+    )
+    adversarial_classifier = mnistfcn_dispatcher(
+        device=device, use_kwta=(True if args.kwta else False)
+    )
+    repr_funnel = compressor_dispatcher(290, 290 // 5, device=device)
     _, _, _, carso_decoder = fcn_carso_dispatcher(
-        28 * 28 // 4, 290 // 5, (28 * 28 // 4 + 290 // 5 + 36) // 2, 36, 28 * 28, device
+        28 * 28 // 4,
+        290 // 5,
+        (28 * 28 // 4 + 290 // 5 + 36) // 2,
+        36,
+        28 * 28,
+        device=device,
     )
     del _
 
