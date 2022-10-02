@@ -89,10 +89,8 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
 
     if args.autolr:
         TRAIN_EPOCHS: int = 300
-        startlr = 0.0075
     else:
         TRAIN_EPOCHS: int = 100
-        startlr = 0.001
 
     PRINT_EVERY_NEP = 120
 
@@ -154,7 +152,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         + list(carso_enc_sigma.parameters())
         + list(carso_dec.parameters())
         + list(gauss_rp_sampler.parameters()),
-        lr=startlr,
+        lr=0.001,
     )
 
     if args.autolr:
