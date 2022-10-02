@@ -26,8 +26,8 @@ def pixelwise_bce_mean(lhs, rhs):
     return F.binary_cross_entropy(lhs, rhs, reduction="mean")
 
 
-# ---- MNIST FCN CLASSIFIER DIspatcher ----
-def mnistfcn_dispatcher(device=None, use_kwta=False):
+# ---- MNIST FCN CLASSIFIER DISPATCHER ----
+def mnistfcn_dispatcher(device=None, kwta_filter=False):
     mnistfcn = Sequential(
         FieldTransform(pre_sum=-0.1307, mult_div=0.3081, div_not_mul=True),
         Flatten(),
@@ -37,16 +37,20 @@ def mnistfcn_dispatcher(device=None, use_kwta=False):
             bias=True,
             activation_fx=(
                 ModuleList(modules=(Mish(), Mish(), Mish()))
-                if not use_kwta
+                if not kwta_filter
                 else ModuleList(
                     modules=(
-                        KWTA1d(largest=True, absolute=True, ratio=0.34),
-                        KWTA1d(largest=True, absolute=True, ratio=0.25),
-                        KWTA1d(largest=True, absolute=True, ratio=0.2),
+                        Sequential(
+                            Mish(), KWTA1d(largest=True, absolute=True, ratio=0.3)
+                        ),
+                        Sequential(
+                            Mish(), KWTA1d(largest=True, absolute=True, ratio=0.3)
+                        ),
+                        Mish(),
                     )
                 )
             ),
-            dropout=([0.15, 0.15, False] if not use_kwta else [False, False, False]),
+            dropout=([0.15, 0.15, False] if not kwta_filter else [False, False, False]),
             batchnorm=[True, True, False],
         ),
         LogSoftmax(dim=1),

@@ -62,7 +62,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         "--kwta",
         action="store_true",
         default=False,
-        help="Use the kWTA activation function (instead of Mish)",
+        help="Constrain neuron activation with kWTA selection",
     )
     args = parser.parse_args()
 
@@ -81,10 +81,9 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
     device = th.device("cuda" if use_cuda else "cpu")
 
     # ---- MODEL DEFINITION / INSTANTIATION ----
-    model = mnistfcn_dispatcher(device=device, use_kwta=(True if args.kwta else False))
-    if not args.kwta:
-        for layer in model.modules():
-            mishlayer_init(layer)
+    model = mnistfcn_dispatcher(device=device, kwta_filter=bool(args.kwta))
+    for layer in model.modules():
+        mishlayer_init(layer)
 
     # ---- TRAINING TUNING ----
     TRAIN_BATCHSIZE: int = 256
@@ -129,7 +128,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
                 "hidden_sizes": (200, 80),
                 "output_size": 10,
                 "dropout": (0.15, 0.15, 0.0),
-                "activations": ("mish" if not args.kwta else "kWTA"),
+                "activations": ("mish" + ("+kwta" if args.kwta else "")),
                 "gating": "log_softmax",
                 "batchnorm": (True, True, False),
                 "bias": True,

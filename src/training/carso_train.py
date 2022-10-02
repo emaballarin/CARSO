@@ -65,7 +65,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         "--kwta",
         action="store_true",
         default=False,
-        help="Use the kWTA activation function (instead of Mish)",
+        help="Constrain neuron activation with kWTA selection",
     )
     args = parser.parse_args()
 
@@ -102,9 +102,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     )
     del _
 
-    vanilla_classifier = mnistfcn_dispatcher(
-        device=device, use_kwta=(True if args.kwta else False)
-    )
+    vanilla_classifier = mnistfcn_dispatcher(device=device, kwta_filter=bool(args.kwta))
     vanilla_classifier.load_state_dict(th.load("../models/mnist_fcn_adv.pth"))
 
     mnist_data_prep = mnist_data_prep_dispatcher(device=device)

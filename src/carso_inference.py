@@ -75,7 +75,7 @@ def main():
         "--kwta",
         action="store_true",
         default=False,
-        help="Use the kWTA activation function (instead of Mish)",
+        help="Constrain neuron activation with kWTA selection",
     )
     args = parser.parse_args()
 
@@ -95,11 +95,9 @@ def main():
     del _
 
     # ---- MODEL DEFINITION / INSTANTIATION ----
-    vanilla_classifier = mnistfcn_dispatcher(
-        device=device, use_kwta=(True if args.kwta else False)
-    )
+    vanilla_classifier = mnistfcn_dispatcher(device=device, kwta_filter=bool(args.kwta))
     adversarial_classifier = mnistfcn_dispatcher(
-        device=device, use_kwta=(True if args.kwta else False)
+        device=device, kwta_filter=bool(args.kwta)
     )
     repr_funnel = compressor_dispatcher(290, 290 // 5, device=device)
     _, _, _, carso_decoder = fcn_carso_dispatcher(
