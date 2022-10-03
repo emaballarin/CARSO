@@ -174,11 +174,18 @@ def main():
                 dim=1, keepdim=True
             )
             # Classify with CARSO
-            repr_layers = (
-                "2.module_battery.1",
-                "2.module_battery.5",
-                "2.module_battery.9",
-            )
+            if args.kwta:
+                repr_layers = (
+                    "2.module_battery.1.1",
+                    "2.module_battery.4.1",
+                    "2.module_battery.7",
+                )
+            else:
+                repr_layers = (
+                    "2.module_battery.1",
+                    "2.module_battery.5",
+                    "2.module_battery.9",
+                )
             carso_clean_class = carso_ensembled_infer(
                 adversarial_classifier,
                 repr_funnel,

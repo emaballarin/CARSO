@@ -171,6 +171,19 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         adversaries = []
         namepiece: str = "clean"
 
+    if args.kwta:
+        repr_layers = (
+            "2.module_battery.1.1",
+            "2.module_battery.4.1",
+            "2.module_battery.7",
+        )
+    else:
+        repr_layers = (
+            "2.module_battery.1",
+            "2.module_battery.5",
+            "2.module_battery.9",
+        )
+
     # ---- TRAINING STATISTICS ----
     train_acc_avgmeter = AverageMeter("batchwise training loss")
 
@@ -186,11 +199,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
             "loss_fn": "pixelwise_bce_sum + KLDiv",
             "architecture": "CARSO-FCN",
             "architecture_params": "see entrypoint file",
-            "represented_layers": (
-                "2.module_battery.1",
-                "2.module_battery.5",
-                "2.module_battery.9",
-            ),
+            "represented_layers": repr_layers,
             "trained_attacks": ("fgsw", "fgss", "pgdw", "pgds"),
         }
         run["parameters"] = run_params
@@ -233,11 +242,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
                         vanilla_classifier,
                         data,
                         device,
-                        [
-                            "2.module_battery.1",
-                            "2.module_battery.5",
-                            "2.module_battery.9",
-                        ],
+                        list(repr_layers),
                         preserve_graph=False,
                     )
                     del _
