@@ -7,11 +7,15 @@ from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import LinfPGDAttack
 
 
-def attacks_dispatcher(  # NOSONAR
+random_noise_not_implemented: str = "Random noise attack not implemented yet"
+
+
+def attacks_dispatcher(  # pylint: disable=too-many-arguments #NOSONAR
     model,
     fgsm: bool = True,
     pgd: bool = True,
     deepfool: bool = False,
+    randomnoise: bool = False,
     weak: bool = True,
     strong: bool = True,
     strongest: bool = False,
@@ -134,5 +138,14 @@ def attacks_dispatcher(  # NOSONAR
                 targeted=False,
             )
         )
+
+    if randomnoise and weak:
+        raise NotImplementedError(random_noise_not_implemented)
+
+    if randomnoise and strong:
+        raise NotImplementedError(random_noise_not_implemented)
+
+    if randomnoise and strongest:
+        raise NotImplementedError(random_noise_not_implemented)
 
     return adversaries

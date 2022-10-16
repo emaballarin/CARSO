@@ -9,7 +9,7 @@ from ebtorch.logging import AverageMeter
 from ebtorch.nn import GaussianReparameterizerSampler
 from ebtorch.nn.utils import gather_model_repr
 from ebtorch.nn.utils import model_reqgrad_
-from ebtorch.optim import RAdam
+from ebtorch.optim import Lookahead
 from tooling.architectures import compressor_dispatcher
 from tooling.architectures import fcn_carso_dispatcher
 from tooling.architectures import mnist_data_prep_dispatcher
@@ -18,6 +18,7 @@ from tooling.architectures import pixelwise_bce_sum
 from tooling.attacks import attacks_dispatcher
 from tooling.data import mnist_dataloader_dispatcher
 from torch import Tensor
+from torch.optim import RAdam
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -67,17 +68,23 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         default=False,
         help="Constrain neuron activation with kWTA selection",
     )
+    parser.add_argument(
+        "--randomnoise",
+        action="store_true",
+        default=False,
+        help="Perform 'iterative' adversarial training with random noise only",
+    )
+    parser.add_argument(
+        "--lah",
+        action="store_true",
+        default=False,
+        help="Use the Lookahead optimization scheme",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
     if args.neptunelog:
-        run_tags = ["MNIST", "CARSO"]
-        if args.attack:
-            run_tags.append("adversarial")
-        else:
-            run_tags.append("clean")
-
-        run = neptune.init_run(project="emaballarin/CARSO", tags=run_tags)
+        run = neptune.init_run(project="emaballarin/CARSO")
 
     # ---- DEVICE HANDLING ----
     use_cuda = not args.no_cuda and th.cuda.is_available()
@@ -153,6 +160,9 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         lr=0.001,
     )
 
+    if args.lah:
+        OPTIMIZER = Lookahead(optimizer=OPTIMIZER, la_steps=5)
+
     if args.autolr:
         SCHEDULER = ReduceLROnPlateau(
             OPTIMIZER, mode="min", factor=0.7, patience=10, cooldown=2, verbose=True
@@ -164,8 +174,13 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     INNER_SCHEDULER = None
 
     # ---- ADVERSARY ----
-    if args.attack:
-        adversaries = attacks_dispatcher(model=vanilla_classifier)
+    if args.attack or args.randomnoise:
+        if args.randomnoise:
+            adversaries = attacks_dispatcher(
+                model=vanilla_classifier, fgsm=False, pgd=False, randomnoise=True
+            )
+        else:
+            adversaries = attacks_dispatcher(model=vanilla_classifier)
         namepiece: str = "adv"
     else:
         adversaries = []
@@ -200,7 +215,6 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
             "architecture": "CARSO-FCN",
             "architecture_params": "see entrypoint file",
             "represented_layers": repr_layers,
-            "trained_attacks": ("fgsw", "fgss", "pgdw", "pgds"),
         }
         run["parameters"] = run_params
 
@@ -303,12 +317,18 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
             run["train/lr"].log(OPTIMIZER.param_groups[0]["lr"])
             run["train/loss"].log(loss.item())
 
+        if isinstance(OPTIMIZER, Lookahead):
+            OPTIMIZER._backup_and_load_cache()  # pylint: disable=protected-access
+            OPTIMIZER._clear_and_load_backup()  # pylint: disable=protected-access
+
         if args.autolr:
             SCHEDULER.step(loss.item())
         else:
             SCHEDULER.step()  # pylint: disable=no-value-for-parameter
 
     if args.save_model or args.neptunelog:
+        if isinstance(OPTIMIZER, Lookahead):
+            OPTIMIZER._backup_and_load_cache()  # pylint: disable=protected-access
         model_namepath_funnel = f"../models/repr_funnel_{namepiece}.pth"
         model_namepath_dec = f"../models/carso_dec_{namepiece}.pth"
         th.save(
