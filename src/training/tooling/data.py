@@ -13,8 +13,8 @@ from torchvision.transforms import ToTensor
 
 def mnist_dataloader_dispatcher(
     data_root: str = "../datasets/",
-    batch_size_train: int = 256,
-    batch_size_test: int = 512,
+    batch_size_train: int = 512,
+    batch_size_test: int = 1024,
     cuda_accel: bool = False,
     dataset_kwargs: Optional[dict] = None,
     dataloader_kwargs: Optional[dict] = None,

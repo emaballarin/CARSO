@@ -18,9 +18,9 @@ from tooling.architectures import pixelwise_bce_sum
 from tooling.attacks import attacks_dispatcher
 from tooling.data import mnist_dataloader_dispatcher
 from torch import Tensor
-from torch.optim import RAdam
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchelie.optim import RAdamW
 
 
 def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
@@ -91,8 +91,8 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     device = th.device("cuda" if use_cuda else "cpu")
 
     # ---- TRAINING TUNING ----
-    TRAIN_BATCHSIZE: int = 256
-    TEST_BATCHSIZE: int = 512
+    TRAIN_BATCHSIZE: int = 512
+    TEST_BATCHSIZE: int = 1024
 
     if args.autolr:
         TRAIN_EPOCHS: int = 300
@@ -148,7 +148,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
     model_reqgrad_(vanilla_classifier, set_to=False)
 
     # ---- OPTIMIZER AND SCHEDULER ----
-    OPTIMIZER = RAdam(
+    OPTIMIZER = RAdamW(
         list(mnist_data_prep.parameters())
         + list(input_funnel.parameters())
         + list(repr_funnel.parameters())
@@ -206,7 +206,7 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         run_params = {
             "epoch_nr": TRAIN_EPOCHS,
             "batch_size": TRAIN_BATCHSIZE,
-            "optimizer": "RAdam",
+            "optimizer": "RAdamW",
             "lr": 0.001,
             "scheduler": SCHEDULER.__class__.__name__,
             "scheduler_milestones": [30, 40, 50, 60, 70, 75, 95],

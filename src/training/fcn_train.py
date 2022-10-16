@@ -14,9 +14,9 @@ from tooling.attacks import attacks_dispatcher
 from tooling.data import mnist_dataloader_dispatcher
 from tooling.loops import test
 from tooling.loops import train_epoch
-from torch.optim import RAdam
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchelie.optim import RAdamW
 
 
 def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
@@ -92,8 +92,8 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         mishlayer_init(layer)
 
     # ---- TRAINING TUNING ----
-    TRAIN_BATCHSIZE: int = 256
-    TEST_BATCHSIZE: int = 512
+    TRAIN_BATCHSIZE: int = 512
+    TEST_BATCHSIZE: int = 1024
 
     if args.autolr:
         TRAIN_EPOCHS: int = 200
@@ -103,7 +103,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         startlr = 1e-2
 
     LOSSFN = F.nll_loss
-    OPTIMIZER = RAdam(model.parameters(), lr=startlr)
+    OPTIMIZER = RAdamW(model.parameters(), lr=startlr)
     if args.lah:
         OPTIMIZER = Lookahead(optimizer=OPTIMIZER, la_steps=3)
     if args.autolr:
@@ -124,7 +124,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         run_params = {
             "epoch_nr": TRAIN_EPOCHS,
             "batch_size": TRAIN_BATCHSIZE,
-            "optimizer": "RAdam",
+            "optimizer": "RAdamW",
             "lr": 1e-2,
             "scheduler": OPTIMIZER.__class__.__name__,
             "scheduler_milestones": [15, 20, 25, 30, 40, 50],

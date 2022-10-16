@@ -13,7 +13,9 @@ from training.tooling.data import mnist_dataloader_dispatcher
 
 
 def attack_shorthand(model_arg, shorthand):
-    attack_library = attacks_dispatcher(model_arg, True, True, True, True, True, True)
+    attack_library = attacks_dispatcher(
+        model_arg, True, True, True, False, True, True, True
+    )
     if shorthand == "pgdw":
         return attack_library[0]
     if shorthand == "pgds":
@@ -80,7 +82,7 @@ def main():
     args = parser.parse_args()
 
     # Inference constants
-    TEST_BATCHSIZE: int = 512
+    TEST_BATCHSIZE: int = 1024
 
     # ---- DEVICE HANDLING ----
     use_cuda = not args.no_cuda and th.cuda.is_available()
@@ -88,7 +90,7 @@ def main():
 
     # ---- DATASETS ----
     _, test_dl, _ = mnist_dataloader_dispatcher(
-        batch_size_train=256,
+        batch_size_train=512,
         batch_size_test=TEST_BATCHSIZE,
         cuda_accel=bool(device == th.device("cuda")),
     )
