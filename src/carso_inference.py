@@ -82,7 +82,7 @@ def main():
     args = parser.parse_args()
 
     # Inference constants
-    TEST_BATCHSIZE: int = 1024
+    TEST_BATCHSIZE: int = 512
 
     # ---- DEVICE HANDLING ----
     use_cuda = not args.no_cuda and th.cuda.is_available()
@@ -90,7 +90,7 @@ def main():
 
     # ---- DATASETS ----
     _, test_dl, _ = mnist_dataloader_dispatcher(
-        batch_size_train=512,
+        batch_size_train=256,
         batch_size_test=TEST_BATCHSIZE,
         cuda_accel=bool(device == th.device("cuda")),
     )
