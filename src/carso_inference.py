@@ -14,7 +14,7 @@ from training.tooling.data import mnist_dataloader_dispatcher
 
 def attack_shorthand(model_arg, shorthand):
     attack_library = attacks_dispatcher(
-        model_arg, True, True, True, False, True, True, True
+        model_arg, True, True, True, True, False, True, True, True
     )
     if shorthand == "pgdw":
         return attack_library[0]
@@ -34,6 +34,12 @@ def attack_shorthand(model_arg, shorthand):
         return attack_library[7]
     if shorthand == "dflx":
         return attack_library[8]
+    if shorthand == "apgw":
+        return attack_library[9]
+    if shorthand == "apgs":
+        return attack_library[10]
+    if shorthand == "apgx":
+        return attack_library[11]
 
 
 def main():
@@ -53,7 +59,7 @@ def main():
         type=str,
         default="dfl",
         metavar="atk",
-        help="Shorthand name of the attack to use (one of: 'pgd', 'fgs', 'dfl')",
+        help="Shorthand name of the attack to use (one of: 'pgd', 'fgs', 'dfl', 'apg')",
     )
     parser.add_argument(
         "--strong",

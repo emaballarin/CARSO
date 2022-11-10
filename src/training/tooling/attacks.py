@@ -5,6 +5,9 @@ import torch as th
 from advertorch.attacks import DeepfoolLinfAttack
 from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import LinfPGDAttack
+from torchattacks.attacks.apgd import APGD
+
+from .adapters.ta2at import TA2ATAdapter
 
 
 random_noise_not_implemented: str = "Random noise attack not implemented yet"
@@ -15,6 +18,7 @@ def attacks_dispatcher(  # pylint: disable=too-many-arguments #NOSONAR
     fgsm: bool = True,
     pgd: bool = True,
     deepfool: bool = False,
+    apgd_dlr: bool = False,
     randomnoise: bool = False,
     weak: bool = True,
     strong: bool = True,
@@ -136,6 +140,32 @@ def attacks_dispatcher(  # pylint: disable=too-many-arguments #NOSONAR
                 clip_min=0.0,
                 clip_max=1.0,
                 targeted=False,
+            )
+        )
+
+    if apgd_dlr and weak:
+        adversaries.append(
+            TA2ATAdapter(
+                APGD(
+                    model=model, norm="Linf", eps=0.15, steps=50, loss="dlr", rho=0.05
+                ),
+                xsize=(28, 28),
+            )
+        )
+
+    if apgd_dlr and strong:
+        adversaries.append(
+            TA2ATAdapter(
+                APGD(model=model, norm="Linf", eps=0.3, steps=50, loss="dlr", rho=0.05),
+                xsize=(28, 28),
+            )
+        )
+
+    if apgd_dlr and strongest:
+        adversaries.append(
+            TA2ATAdapter(
+                APGD(model=model, norm="Linf", eps=0.5, steps=50, loss="dlr", rho=0.05),
+                xsize=(28, 28),
             )
         )
 

@@ -2,4 +2,5 @@ ebtorch>=0.4
 torch>=1.12.1
 torchsummary>=1.5.1
 torchvision>=0.13
+torchattacks>=3.3
 git+https://github.com/Vermeille/Torchelie.git
