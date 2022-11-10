@@ -76,6 +76,12 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
         default=False,
         help="Use the Lookahead optimization scheme",
     )
+    parser.add_argument(
+        "--apgdonly",
+        action="store_true",
+        default=False,
+        help="Adversarially trains the model with APGD only; Requires --attack",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
@@ -163,7 +169,7 @@ def main():  # pylint: disable=too-many-locals,too-many-statements # NOSONAR
                 model=model, fgsm=False, pgd=False, randomnoise=True
             )
         else:
-            if args.apgonly:
+            if args.apgdonly:
                 adversaries = attacks_dispatcher(
                     model=model, fgsm=False, pgd=False, randomnoise=False, apgd_dlr=True
                 )

@@ -80,6 +80,12 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
         default=False,
         help="Use the Lookahead optimization scheme",
     )
+    parser.add_argument(
+        "--apgdonly",
+        action="store_true",
+        default=False,
+        help="Adversarially trains the model with APGD only; Requires --attack",
+    )
     args = parser.parse_args()
 
     # ---- NEPTUNE ----
