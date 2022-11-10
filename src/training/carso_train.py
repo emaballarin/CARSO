@@ -180,7 +180,16 @@ def main():  # NOSONAR # pylint: disable=too-many-locals,too-many-statements
                 model=vanilla_classifier, fgsm=False, pgd=False, randomnoise=True
             )
         else:
-            adversaries = attacks_dispatcher(model=vanilla_classifier)
+            if args.apgdonly:
+                adversaries = attacks_dispatcher(
+                    model=vanilla_classifier,
+                    fgsm=False,
+                    pgd=False,
+                    randomnoise=False,
+                    apgd_dlr=True,
+                )
+            else:
+                adversaries = attacks_dispatcher(model=vanilla_classifier)
         namepiece: str = "adv"
     else:
         adversaries = []
