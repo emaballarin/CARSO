@@ -4,3 +4,4 @@ torchsummary>=1.5.1
 torchvision>=0.13
 torchattacks>=3.3
 git+https://github.com/Vermeille/Torchelie.git
+git+https://github.com/fra31/auto-attack.git

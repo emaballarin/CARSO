@@ -37,7 +37,7 @@ def train_epoch(
             if adversary_idx > 0:
                 data = (
                     adversaries[adversary_idx - 1]
-                    .perturb(data.flatten(start_dim=1), target)
+                    .perturb(data, target)
                     .reshape(data.shape)
                 )
 

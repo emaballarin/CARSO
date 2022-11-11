@@ -157,8 +157,8 @@ def main():
     for _, batched_datapoint in enumerate(test_dl):
         true_data, true_label = batched_datapoint
         true_data, true_label = true_data.to(device), true_label.to(device)
-        fake_data = attack_clean.perturb(true_data.flatten(start_dim=1), true_label)
-        fake_data_adv = attack_adv.perturb(true_data.flatten(start_dim=1), true_label)
+        fake_data = attack_clean.perturb(true_data, true_label)
+        fake_data_adv = attack_adv.perturb(true_data, true_label)
 
         # Just to be sure...
         vanilla_classifier = vanilla_classifier.eval()

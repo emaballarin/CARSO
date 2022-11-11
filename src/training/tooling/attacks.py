@@ -146,26 +146,21 @@ def attacks_dispatcher(  # pylint: disable=too-many-arguments #NOSONAR
     if apgd_dlr and weak:
         adversaries.append(
             TA2ATAdapter(
-                APGD(
-                    model=model, norm="Linf", eps=0.15, steps=50, loss="dlr", rho=0.05
-                ),
-                xsize=(28, 28),
+                APGD(model=model, norm="Linf", eps=0.15, steps=50, loss="dlr", rho=0.05)
             )
         )
 
     if apgd_dlr and strong:
         adversaries.append(
             TA2ATAdapter(
-                APGD(model=model, norm="Linf", eps=0.3, steps=50, loss="dlr", rho=0.05),
-                xsize=(28, 28),
+                APGD(model=model, norm="Linf", eps=0.3, steps=50, loss="dlr", rho=0.05)
             )
         )
 
     if apgd_dlr and strongest:
         adversaries.append(
             TA2ATAdapter(
-                APGD(model=model, norm="Linf", eps=0.5, steps=50, loss="dlr", rho=0.05),
-                xsize=(28, 28),
+                APGD(model=model, norm="Linf", eps=0.5, steps=50, loss="dlr", rho=0.05)
             )
         )
 
