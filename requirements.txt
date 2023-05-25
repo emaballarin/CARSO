@@ -1,0 +1,15 @@
+#
+#  Copyright (c) 2023 Emanuele Ballarin <emanuele@ballarin.cc>
+#  Released under the terms of the MIT License
+#  (see: https://url.ballarin.cc/mitlicense)
+#
+# ------------------------------------------------------------------------------
+
+advertorch>=0.2.3
+ebtorch>=0.5.8
+torch>=2
+torchattacks>=3.3
+torchvision>=0.15
+tqdm>=4.65
+wandb>=0.13.9
+git+https://github.com/fra31/auto-attack.git@master#egg=autoattack

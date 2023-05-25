@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+#  Copyright (c) 2023 Emanuele Ballarin <emanuele@ballarin.cc>
+#  Released under the terms of the MIT License
+#  (see: https://url.ballarin.cc/mitlicense)
+#
+# ------------------------------------------------------------------------------
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+SHA1=$3
+
+SOB=$(git var GIT_COMMITTER_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+git interpret-trailers --in-place --trailer "$SOB" "$COMMIT_MSG_FILE"
+if test -z "$COMMIT_SOURCE"
+then
+  /usr/bin/perl -i.bak -pe 'print "\n" if !$first_line++' "$COMMIT_MSG_FILE"
+fi
