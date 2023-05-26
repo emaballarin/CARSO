@@ -1,6 +1,6 @@
 # `CARSO`: *Counter-Adversarial Recall of Synthetic Observations*
 
-Code for the paper “`CARSO`: *`C`ounter-`A`dversarial `R`ecall of `S`ynthetic `O`bservations*” by [Emanuele Ballarin](https://ballarin.cc), [Alessio Ansuini](https://www.areasciencepark.it/piattaforme-tecnologiche-update-2023/il-team/alessio-ansuini/) and [Luca Bortolussi](https://ai-lab.units.it/?page_id=139) (2023).
+Code for the [paper “`CARSO`: *`C`ounter-`A`dversarial `R`ecall of `S`ynthetic `O`bservations*”](https://url.ballarin.cc/carso2023paper) by [Emanuele Ballarin](https://ballarin.cc), [Alessio Ansuini](https://www.areasciencepark.it/piattaforme-tecnologiche-update-2023/il-team/alessio-ansuini/) and [Luca Bortolussi](https://ai-lab.units.it/?page_id=139) (2023).
 
 ---
 
