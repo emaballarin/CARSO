@@ -12,13 +12,13 @@ import math
 import torch as th
 import wandb
 from carso import CARSOWrap
+from ebtorch.data import cifarten_dataloader_dispatcher
+from ebtorch.data import data_prep_dispatcher_3ch
 from ebtorch.nn import beta_reco_bce
+from ebtorch.nn import PreActResNet
 from ebtorch.nn.utils import AdverApply
 from ebtorch.optim import ralah_optim
-from tooling.architectures import cifar_data_prep_dispatcher
-from tooling.architectures_deepmind import PreActResNet
 from tooling.attacks import attacks_dispatcher
-from tooling.data import cifarten_dataloader_dispatcher
 from torch.optim.lr_scheduler import CyclicLR
 from torch.optim.swa_utils import AveragedModel as SwaAveragedModel
 from torch.optim.swa_utils import update_bn as swa_update_bn
@@ -110,7 +110,7 @@ def main() -> None:
         is_deconvolutional_decoder=True,
         is_cifar_decoder=True,
         binarize_repr=False,
-        input_preprocessor=cifar_data_prep_dispatcher(device, post_flatten=False),
+        input_preprocessor=data_prep_dispatcher_3ch(device, post_flatten=False),
         # Forced/Dummy
         compressed_input_data_size=0,
         ensemble_numerosity=0,
@@ -202,9 +202,9 @@ def main() -> None:
 
     print("\nTraining...\n")
 
-    for epoch in trange(adapted_epochs, desc="Training epoch"):
+    for epoch in trange(adapted_epochs, desc="Training epoch"):  # type: ignore
         # ----------------------------------------------------------------------
-        for batch_idx, batched_datapoint in tqdm(
+        for batch_idx, batched_datapoint in tqdm(  # type: ignore
             enumerate(train_dl),
             total=len(train_dl),
             desc="Batch within epoch",
@@ -217,7 +217,7 @@ def main() -> None:
                 output_also_clean=True,
             )
 
-            data, target, old_data = batched_datapoint
+            data, _, old_data = batched_datapoint
 
             optimizer.zero_grad()
 

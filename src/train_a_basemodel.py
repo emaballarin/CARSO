@@ -11,6 +11,8 @@ import argparse
 import torch as th
 import torch.nn.functional as F
 import wandb
+from ebtorch.data import fashionmnist_dataloader_dispatcher
+from ebtorch.data import mnist_dataloader_dispatcher
 from ebtorch.logging import AverageMeter
 from ebtorch.nn import mishlayer_init
 from ebtorch.nn.utils import AdverApply
@@ -20,8 +22,6 @@ from tooling.architectures import fashionmnist_cnn_classifier_dispatcher
 from tooling.architectures import mnist_cnn_classifier_dispatcher
 from tooling.architectures import mnist_fcn_classifier_dispatcher
 from tooling.attacks import attacks_dispatcher
-from tooling.data import fashionmnist_dataloader_dispatcher
-from tooling.data import mnist_dataloader_dispatcher
 from torch.optim.lr_scheduler import CyclicLR
 from tqdm.auto import tqdm
 from tqdm.auto import trange
@@ -161,12 +161,12 @@ def main():  # NOSONAR
             },
         )
     # --------------------------------------------------------------------------
-    for _ in trange(args.epochs, desc="Training epoch"):
+    for _ in trange(args.epochs, desc="Training epoch"):  # type: ignore
         # USUAL TRAINING LOOP (cfr. tooling/loops.py)
         classifier_model.train()
         train_loss_meter.reset()
 
-        for batch_idx, batched_datapoint in tqdm(
+        for batch_idx, batched_datapoint in tqdm(  # type: ignore
             enumerate(train_dl), total=len(train_dl), leave=False, desc="Training batch"
         ):
             batched_datapoint = adversarial_apply(
@@ -194,7 +194,7 @@ def main():  # NOSONAR
         test_acc_meter.reset()
         correct: int = 0
         with th.no_grad():
-            for data, target in tqdm(
+            for data, target in tqdm(  # type: ignore
                 iterable=test_dl, desc="Testing batch", leave=False
             ):
                 data, target = data.to(device), target.to(device)
@@ -204,7 +204,7 @@ def main():  # NOSONAR
                 )  # get the index of the max (log-)probability class
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
-        ltlds: int = len(test_dl.dataset)
+        ltlds: int = len(test_dl.dataset)  # type: ignore
         test_acc_meter.update(correct / ltlds)
 
         if isinstance(optimizer, Lookahead):

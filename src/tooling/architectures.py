@@ -10,7 +10,6 @@ from copy import deepcopy
 from typing import Optional
 from typing import Tuple
 
-import torch as th
 from ebtorch import nn as ebthnn
 from torch import nn as thnn
 
@@ -56,42 +55,6 @@ def _deconv_block(
         thnn.BatchNorm2d(num_features=out_channels) if do_bn else thnn.Identity(),
         deepcopy(final_activation),
     )
-
-
-# Data preparation
-
-
-def mnist_data_prep_dispatcher(post_flatten: bool = True) -> thnn.Module:
-    if post_flatten:
-        post_function: thnn.Module = thnn.Flatten()
-    else:
-        post_function: thnn.Module = thnn.Identity()
-    mnist_data_prep: thnn.Module = thnn.Sequential(
-        ebthnn.FieldTransform(pre_sum=-0.1307, mult_div=0.3081, div_not_mul=True),
-        deepcopy(post_function),
-    )
-    return mnist_data_prep
-
-
-def cifar_data_prep_dispatcher(
-    device, post_flatten: bool = True, inverse: bool = False
-) -> thnn.Module:
-    if post_flatten:
-        post_function: thnn.Module = thnn.Flatten()
-    else:
-        post_function: thnn.Module = thnn.Identity()
-    cifar_data_prep: thnn.Module = thnn.Sequential(
-        ebthnn.FieldTransform(
-            pre_sum=(not inverse)
-            * th.tensor([[[-0.4914]], [[-0.4822]], [[-0.4465]]]).to(device),
-            mult_div=th.tensor([[[0.2471]], [[0.2435]], [[0.2616]]]).to(device),
-            div_not_mul=not inverse,
-            post_sum=inverse
-            * th.tensor([[[0.4914]], [[0.4822]], [[0.4465]]]).to(device),
-        ),
-        deepcopy(post_function),
-    ).to(device)
-    return cifar_data_prep
 
 
 # Classifier models

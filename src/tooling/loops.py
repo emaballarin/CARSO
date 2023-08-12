@@ -35,10 +35,10 @@ def train_epoch(
     model: thnn.Module = model.train()
 
     train_acc_avgmeter.reset()
-    for batch_idx, batched_datapoint in tqdm(
+    for batch_idx, batched_datapoint in tqdm(  # type: ignore
         enumerate(train_loader), total=len(train_loader), desc="Training batch"
     ):
-        for adversary_idx in trange(
+        for adversary_idx in trange(  # type: ignore
             len(adversaries) + 1, leave=False, desc="Adversary"
         ):
             data, target = batched_datapoint
@@ -85,7 +85,7 @@ def test(
 
     test_acc_avgmeter.reset()
     with th.no_grad():
-        for data, target in tqdm(
+        for data, target in tqdm(  # type: ignore
             iterable=test_loader, desc="Testing batch", leave=False
         ):
             data, target = data.to(device), target.to(device)

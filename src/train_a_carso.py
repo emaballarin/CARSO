@@ -11,16 +11,16 @@ import argparse
 import torch as th
 import wandb
 from carso import CARSOWrap
+from ebtorch.data import data_prep_dispatcher_1ch
+from ebtorch.data import fashionmnist_dataloader_dispatcher
+from ebtorch.data import mnist_dataloader_dispatcher
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn.utils import AdverApply
 from ebtorch.optim import ralah_optim
 from tooling.architectures import fashionmnist_cnn_classifier_dispatcher
 from tooling.architectures import mnist_cnn_classifier_dispatcher
-from tooling.architectures import mnist_data_prep_dispatcher
 from tooling.architectures import mnist_fcn_classifier_dispatcher
 from tooling.attacks import attacks_dispatcher
-from tooling.data import fashionmnist_dataloader_dispatcher
-from tooling.data import mnist_dataloader_dispatcher
 from torch.optim.lr_scheduler import CyclicLR
 from tqdm.auto import tqdm
 from tqdm.auto import trange
@@ -143,7 +143,7 @@ def main() -> None:
         is_cifar_decoder=False,
         binarize_repr=False,
         input_preprocessor=(
-            mnist_data_prep_dispatcher(post_flatten=False)
+            data_prep_dispatcher_1ch(device=device, post_flatten=False)
             if args.dataset == "mnist"
             else th.nn.Identity()
         ),
@@ -219,9 +219,9 @@ def main() -> None:
 
     print("\nTraining...\n")
 
-    for epoch in trange(args.epochs, desc="Training epoch"):
+    for _ in trange(args.epochs, desc="Training epoch"):  # type: ignore
         # ----------------------------------------------------------------------
-        for batch_idx, batched_datapoint in tqdm(
+        for batch_idx, batched_datapoint in tqdm(  # type: ignore
             enumerate(train_dl),
             total=len(train_dl),
             desc="Batch within epoch",
@@ -234,7 +234,7 @@ def main() -> None:
                 output_also_clean=True,
             )
 
-            data, target, old_data = batched_datapoint
+            data, _, old_data = batched_datapoint
 
             optimizer.zero_grad()
 

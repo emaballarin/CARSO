@@ -272,3 +272,6 @@ datasets/
 # IntelliJ IDEA configuration files (as a whole)
 .idea/
 .idea/**
+
+# Plot making
+src/make_plots.py

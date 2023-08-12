@@ -11,12 +11,12 @@ import argparse
 import autoattack as aatk
 import torch as th
 from carso import CARSOWrap
+from ebtorch.data import data_prep_dispatcher_1ch
+from ebtorch.data import fashionmnist_dataloader_dispatcher
+from ebtorch.data import mnist_dataloader_dispatcher
 from tooling.architectures import fashionmnist_cnn_classifier_dispatcher
 from tooling.architectures import mnist_cnn_classifier_dispatcher
-from tooling.architectures import mnist_data_prep_dispatcher
 from tooling.architectures import mnist_fcn_classifier_dispatcher
-from tooling.data import fashionmnist_dataloader_dispatcher
-from tooling.data import mnist_dataloader_dispatcher
 from tqdm.auto import tqdm
 
 # ------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ def main() -> None:
         is_cifar_decoder=False,
         binarize_repr=False,
         input_preprocessor=(
-            mnist_data_prep_dispatcher(post_flatten=False)
+            data_prep_dispatcher_1ch(device=device, post_flatten=False)
             if args.dataset == "mnist"
             else th.nn.Identity()
         ),
@@ -201,7 +201,7 @@ def main() -> None:
 
     print("\nTesting...")
 
-    for _, (true_data, true_label) in tqdm(
+    for _, (true_data, true_label) in tqdm(  # type: ignore
         iterable=enumerate(test_dl), total=len(test_dl), desc="Testing batch"
     ):
         true_data, true_label = true_data.to(device), true_label.to(device)

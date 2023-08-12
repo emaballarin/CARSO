@@ -11,9 +11,9 @@ import argparse
 import autoattack as aatk
 import torch as th
 from carso import CARSOWrap
-from tooling.architectures import cifar_data_prep_dispatcher
+from ebtorch.data import cifarten_dataloader_dispatcher
+from ebtorch.data import data_prep_dispatcher_3ch
 from tooling.architectures import PreActResNet18Cifar10
-from tooling.data import cifarten_dataloader_dispatcher
 from tqdm.auto import tqdm
 
 # ------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ def main() -> None:
         is_deconvolutional_decoder=True,
         is_cifar_decoder=True,
         binarize_repr=False,
-        input_preprocessor=cifar_data_prep_dispatcher(device, post_flatten=False),
+        input_preprocessor=data_prep_dispatcher_3ch(device, post_flatten=False),
         differentiable_inference=False if not (args.e2e or args.noextract) else True,
         sum_of_softmaxes_inference=False if not (args.e2e or args.noextract) else True,
         suppress_stochastic_inference=True if args.ensemble_numerosity == 1 else False,
@@ -157,7 +157,7 @@ def main() -> None:
 
     print("\nTesting...")
 
-    for _, (true_data, true_label) in tqdm(
+    for _, (true_data, true_label) in tqdm(  # type: ignore
         iterable=enumerate(test_dl), total=len(test_dl), desc="Testing batch"
     ):
         true_data, true_label = true_data.to(device), true_label.to(device)
