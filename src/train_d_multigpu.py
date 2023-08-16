@@ -164,7 +164,7 @@ def main_run(args: argparse.Namespace) -> None:
     # Adapt learning rate to batch size (heuristically: linear scaling)
     lr_magic_constant: float = 1.5
     adapted_lr_max: float = lr_magic_constant * 1e-5 * args.batchsize * world_size
-    adapted_lr_min: float = 5e-8
+    adapted_lr_min: float = 1e-9
 
     optimizer = ralah_optim(
         carso_machinery.parameters(), radam_lr=adapted_lr_min, la_steps=5
