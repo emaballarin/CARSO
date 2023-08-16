@@ -337,16 +337,19 @@ class CARSOWrap(thnn.Module):
 
     # --------------------------------------------------------------------------
 
-    def parameters_to_train(self: T) -> Iterable[th.Tensor]:
+    def parameters_to_train(self: T, *args, **kwargs) -> Iterable[th.Tensor]:
         return itertools.chain(
-            self.input_compressor.parameters(),
-            self.repr_compressor.parameters(),
-            self.enc_neck.parameters(),
-            self.enc_mu.parameters(),
-            self.enc_sigma.parameters(),
-            self.dec.parameters(),
-            self.grps.parameters(),
+            self.input_compressor.parameters(*args, **kwargs),
+            self.repr_compressor.parameters(*args, **kwargs),
+            self.enc_neck.parameters(*args, **kwargs),
+            self.enc_mu.parameters(*args, **kwargs),
+            self.enc_sigma.parameters(*args, **kwargs),
+            self.dec.parameters(*args, **kwargs),
+            self.grps.parameters(*args, **kwargs),
         )
+
+    def parameters(self: T, *args, **kwargs) -> Iterable[th.Tensor]:
+        return self.parameters_to_train(*args, **kwargs)
 
     def set_repr_layers_names_lookup(
         self: T, repr_layers_names_lookup: Optional[Tuple[str, ...]]

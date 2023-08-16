@@ -275,3 +275,6 @@ datasets/
 
 # Plot making
 src/make_plots.py
+
+# Experiments / Scratchbook
+src/scratchbook.py
