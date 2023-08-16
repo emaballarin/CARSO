@@ -55,7 +55,7 @@ def main_parse() -> argparse.Namespace:
     parser.add_argument(
         "--batchsize",
         type=int,
-        default=1024,
+        default=1280,
         metavar="<batch_size>",
         help="Per-GPU batch size for training (default: 1024)",
     )
@@ -162,16 +162,16 @@ def main_run(args: argparse.Namespace) -> None:
     )
 
     # Adapt learning rate to batch size (heuristically: linear scaling)
-    lr_magic_constant: float = 3.5
+    lr_magic_constant: float = 1.5
     adapted_lr_max: float = lr_magic_constant * 1e-5 * args.batchsize * world_size
-    adapted_lr_min: float = 0.5e-8
+    adapted_lr_min: float = 5e-8
 
     optimizer = ralah_optim(
         carso_machinery.parameters(), radam_lr=adapted_lr_min, la_steps=5
     )
 
     optimizer, scheduler = tricyc1c(
-        optimizer, adapted_lr_min, adapted_lr_max, 0.3, args.epochs
+        optimizer, adapted_lr_min, adapted_lr_max, 0.2, args.epochs
     )
 
     adversaries = attacks_dispatcher(model=vanilla_classifier, dataset="cifarnorm")
@@ -191,7 +191,7 @@ def main_run(args: argparse.Namespace) -> None:
                 "epochs": args.epochs,
                 "loss_function": "Pixelwise Binary CrossEntropy; Reduction: Sum",
                 "optimizer": "RAdam + Lookahead (5 steps)",
-                "scheduler": f"CyclicLR (triangular): base_lr={adapted_lr_min}, max_lr={adapted_lr_max}, up_frac=0.3, total_steps={args.epochs}",
+                "scheduler": f"CyclicLR (triangular): base_lr={adapted_lr_min}, max_lr={adapted_lr_max}, up_frac=0.2, total_steps={args.epochs}",
                 "attacks": "FGSM Linf eps=4/255 eps=8/255 + PGD Linf eps=4/255 eps=8/255 steps=40 alpha=0.01",
                 "batchwise_adversarial_fraction": args.advfrac,
             },
@@ -236,7 +236,7 @@ def main_run(args: argparse.Namespace) -> None:
         loss_to_log = loss.detach().clone()
         dist.reduce(loss_to_log, dst=0, op=dist.ReduceOp.SUM)
         if args.wandb and local_rank == 0:
-            loss_to_log = loss_to_log / world_size**2 * args.batchsize
+            loss_to_log = loss_to_log / (world_size**2 * args.batchsize)
             wandb.log(
                 {
                     "lr": optimizer.param_groups[0]["lr"],
