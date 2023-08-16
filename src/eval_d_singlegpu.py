@@ -58,7 +58,7 @@ def main() -> None:
     parser.add_argument(
         "--ensemble_numerosity",
         type=int,
-        default=4,
+        default=6,
         metavar="<batch_size>",
         help="Size of the ensemble used to perform inference (default: 4)",
     )
