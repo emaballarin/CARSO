@@ -18,6 +18,7 @@ from ebtorch.data import data_prep_dispatcher_3ch
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn import WideResNet
 from ebtorch.nn.utils import AdverApply
+from ebtorch.optim import epochwise_onecycle
 from ebtorch.optim import Lookahead
 from ebtorch.optim import ralah_optim
 from ebtorch.optim import tricyc1c
@@ -44,6 +45,12 @@ def main_parse() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Log selected metdata to Weights & Biases (default: False)",
+    )
+    parser.add_argument(
+        "--newsched",
+        action="store_true",
+        default=False,
+        help="Apply the new learning rate scheduler developed for large-batch training (default: False)",
     )
     parser.add_argument(
         "--epochs",
@@ -161,18 +168,27 @@ def main_run(args: argparse.Namespace) -> None:
         "logits",
     )
 
-    # Adapt learning rate to batch size (heuristically: linear scaling)
-    lr_magic_constant: float = 0.8
-    adapted_lr_max: float = lr_magic_constant * 1e-5 * args.batchsize * world_size
-    adapted_lr_min: float = 1e-9
+    optimizer = ralah_optim(carso_machinery.parameters(), radam_lr=0.0, la_steps=6)
 
-    optimizer = ralah_optim(
-        carso_machinery.parameters(), radam_lr=adapted_lr_min, la_steps=6
-    )
-
-    optimizer, scheduler = tricyc1c(
-        optimizer, adapted_lr_min, adapted_lr_max, 0.2, args.epochs
-    )
+    max_lr_magic_constant: float = 0.8 * 1e-5 * args.batchsize * world_size
+    up_frac_magic_constant: float = 0.2
+    if not args.newsched:
+        optimizer, scheduler = tricyc1c(
+            optimizer,
+            min_lr=0.5e-8,
+            max_lr=max_lr_magic_constant,
+            up_frac=up_frac_magic_constant,
+            total_steps=args.epochs,
+        )
+    else:
+        optimizer, scheduler = epochwise_onecycle(
+            optim=optimizer,
+            init_lr=0.5e-7 * args.batchsize * world_size,
+            max_lr=max_lr_magic_constant,
+            final_lr=0.3e-10 * args.batchsize * world_size,
+            up_frac=up_frac_magic_constant,
+            total_steps=args.epochs,
+        )
 
     adversaries = attacks_dispatcher(model=vanilla_classifier, dataset="cifarnorm")
     adversarial_apply = AdverApply(adversaries=adversaries)
@@ -191,7 +207,7 @@ def main_run(args: argparse.Namespace) -> None:
                 "epochs": args.epochs,
                 "loss_function": "Pixelwise Binary CrossEntropy; Reduction: Sum",
                 "optimizer": "RAdam + Lookahead (5 steps)",
-                "scheduler": f"CyclicLR (triangular): base_lr={adapted_lr_min}, max_lr={adapted_lr_max}, up_frac=0.2, total_steps={args.epochs}",
+                "scheduler": "See the code!",
                 "attacks": "FGSM Linf eps=4/255 eps=8/255 + PGD Linf eps=4/255 eps=8/255 steps=40 alpha=0.01",
                 "batchwise_adversarial_fraction": args.advfrac,
             },
@@ -254,10 +270,10 @@ def main_run(args: argparse.Namespace) -> None:
         if isinstance(optimizer, Lookahead):
             optimizer._backup_and_load_cache()
         th.save(
-            carso_machinery.repr_compressor.state_dict(),
+            carso_machinery.model.repr_compressor.state_dict(),
             model_namepath_compressor,
         )
-        th.save(carso_machinery.dec.state_dict(), model_namepath_dec)
+        th.save(carso_machinery.model.dec.state_dict(), model_namepath_dec)
 
     if args.wandb and local_rank == 0:
         repr_compressor = wandb.Artifact(
