@@ -183,9 +183,9 @@ def main_run(args: argparse.Namespace) -> None:
     else:
         optimizer, scheduler = epochwise_onecycle(
             optim=optimizer,
-            init_lr=0.5e-7 * args.batchsize * world_size,
+            init_lr=0.5e-12 * args.batchsize * world_size,
             max_lr=max_lr_magic_constant,
-            final_lr=0.3e-10 * args.batchsize * world_size,
+            final_lr=1e-11 * args.batchsize * world_size,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
         )
@@ -270,10 +270,10 @@ def main_run(args: argparse.Namespace) -> None:
         if isinstance(optimizer, Lookahead):
             optimizer._backup_and_load_cache()
         th.save(
-            carso_machinery.model.repr_compressor.state_dict(),
+            carso_machinery.module.repr_compressor.state_dict(),
             model_namepath_compressor,
         )
-        th.save(carso_machinery.model.dec.state_dict(), model_namepath_dec)
+        th.save(carso_machinery.module.dec.state_dict(), model_namepath_dec)
 
     if args.wandb and local_rank == 0:
         repr_compressor = wandb.Artifact(
