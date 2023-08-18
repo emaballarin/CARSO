@@ -85,7 +85,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # Dataset/DataLoader
     # Repeated twice just to allow gathering of dataset for DistributedSampler
-    batchsize_adaptation_ratio = 14
+    batchsize_adaptation_ratio = 38
     _, test_dl, _ = cifarten_dataloader_dispatcher(
         batch_size_train=1,
         batch_size_test=args.batchsize
@@ -156,7 +156,7 @@ def main_run(args: argparse.Namespace) -> None:
         "norm": "Linf",
         "eps": args.eps,
         "version": "rand" if args.explicitly_random else "standard",
-        "verbose": True,
+        "verbose": False,
     }
     if args.e2e or args.noextract:
         attack_adv_model = aatk.AutoAttack(carso_machinery, **atk_dict_args)

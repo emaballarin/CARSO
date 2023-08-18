@@ -183,8 +183,8 @@ def main_run(args: argparse.Namespace) -> None:
     else:
         optimizer, scheduler = epochwise_onecycle(
             optim=optimizer,
-            init_lr=0.5e-12 * args.batchsize * world_size,
-            max_lr=max_lr_magic_constant,
+            init_lr=1e-13 * args.batchsize * world_size,
+            max_lr=max_lr_magic_constant * 1.25,
             final_lr=1e-11 * args.batchsize * world_size,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
