@@ -18,8 +18,8 @@ from ebtorch.data import data_prep_dispatcher_3ch
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn import WideResNet
 from ebtorch.nn.utils import AdverApply
-from ebtorch.optim import epochwise_onecycle
 from ebtorch.optim import Lookahead
+from ebtorch.optim import onecycle_lincos
 from ebtorch.optim import ralah_optim
 from ebtorch.optim import tricyc1c
 from tooling.attacks import attacks_dispatcher
@@ -50,7 +50,7 @@ def main_parse() -> argparse.Namespace:
         "--newsched",
         action="store_true",
         default=False,
-        help="Apply the new learning rate scheduler developed for large-batch training (default: False)",
+        help="Use the new learning rate scheduler (default: False)",
     )
     parser.add_argument(
         "--epochs",
@@ -170,22 +170,24 @@ def main_run(args: argparse.Namespace) -> None:
 
     optimizer = ralah_optim(carso_machinery.parameters(), radam_lr=0.0, la_steps=6)
 
-    max_lr_magic_constant: float = 0.8 * 1e-5 * args.batchsize * world_size
-    up_frac_magic_constant: float = 0.2
+    min_lr_magic_constant = 5e-9
+    max_lr_magic_constant = 0.85
+    up_frac_magic_constant: float = 0.25
+
     if not args.newsched:
         optimizer, scheduler = tricyc1c(
             optimizer,
-            min_lr=0.5e-8,
-            max_lr=max_lr_magic_constant,
+            min_lr=min_lr_magic_constant,
+            max_lr=max_lr_magic_constant * 1e-5 * args.batchsize * world_size,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
         )
     else:
-        optimizer, scheduler = epochwise_onecycle(
+        optimizer, scheduler = onecycle_lincos(
             optim=optimizer,
-            init_lr=1e-13 * args.batchsize * world_size,
-            max_lr=max_lr_magic_constant * 1.25,
-            final_lr=1e-11 * args.batchsize * world_size,
+            init_lr=min_lr_magic_constant,
+            max_lr=max_lr_magic_constant,
+            final_lr=1e-5,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
         )
@@ -247,7 +249,6 @@ def main_run(args: argparse.Namespace) -> None:
             optimizer.step()
 
         # Every epoch
-        scheduler.step()
         # ----------------------------------------------------------------------
         loss_to_log = loss.detach().clone()
         dist.reduce(loss_to_log, dst=0, op=dist.ReduceOp.SUM)
@@ -259,6 +260,8 @@ def main_run(args: argparse.Namespace) -> None:
                     "avg. loss": loss_to_log.item(),
                 }
             )
+        # ----------------------------------------------------------------------
+        scheduler.step()
         # ----------------------------------------------------------------------
 
     # --------------------------------------------------------------------------
