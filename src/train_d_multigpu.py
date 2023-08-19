@@ -86,6 +86,7 @@ def main_run(args: argparse.Namespace) -> None:
     rank = int(os.environ["SLURM_PROCID"])
     world_size = int(os.environ["WORLD_SIZE"])
     gpus_per_node = int(os.environ["SLURM_GPUS_ON_NODE"])
+    cpus_per_task = int(os.environ["OMP_NUM_THREADS"])
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
     local_rank = int(rank - gpus_per_node * (rank // gpus_per_node))
     device = "cuda:" + str(local_rank)
@@ -107,7 +108,10 @@ def main_run(args: argparse.Namespace) -> None:
         cuda_accel=True,
         shuffle_test=False,
         unshuffle_train=True,
-        dataloader_kwargs={"sampler": DistributedSampler(train_dl.dataset)},
+        dataloader_kwargs={
+            "sampler": DistributedSampler(train_dl.dataset),
+            "num_workers": cpus_per_task,
+        },
     )
     del _
 
@@ -171,14 +175,13 @@ def main_run(args: argparse.Namespace) -> None:
     optimizer = ralah_optim(carso_machinery.parameters(), radam_lr=0.0, la_steps=6)
 
     min_lr_magic_constant = 5e-9
-    max_lr_magic_constant = 0.85
     up_frac_magic_constant: float = 0.25
 
     if not args.newsched:
         optimizer, scheduler = tricyc1c(
             optimizer,
             min_lr=min_lr_magic_constant,
-            max_lr=max_lr_magic_constant * 1e-5 * args.batchsize * world_size,
+            max_lr=0.85 * 1e-5 * args.batchsize * world_size,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
         )
@@ -186,7 +189,7 @@ def main_run(args: argparse.Namespace) -> None:
         optimizer, scheduler = onecycle_lincos(
             optim=optimizer,
             init_lr=min_lr_magic_constant,
-            max_lr=max_lr_magic_constant,
+            max_lr=0.1,
             final_lr=1e-5,
             up_frac=up_frac_magic_constant,
             total_steps=args.epochs,
