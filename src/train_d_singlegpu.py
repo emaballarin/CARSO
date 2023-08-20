@@ -54,7 +54,7 @@ def main() -> None:
         type=int,
         default=800,
         metavar="<batch_size>",
-        help="Batch size for training (default: 1536)",
+        help="Batch size for training (default: 800)",
     )
     parser.add_argument(
         "--advfrac",

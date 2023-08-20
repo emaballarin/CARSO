@@ -46,23 +46,23 @@ def main_parse() -> argparse.Namespace:
     parser.add_argument(
         "--eps",
         type=float,
-        default=8 / 255,
+        default=0.99,
         metavar="<epsilon>",
-        help="Strength of the attack (default: 8/255)",
+        help="Strength of the attack (default: 0.99)",
     )
     parser.add_argument(
         "--batchsize",
         type=int,
-        default=800,
+        default=16,
         metavar="<batch_size>",
-        help="Batch size for testing, model-only; e2e is rescaled accordingly (default: 800)",
+        help="Batch size for testing, model-only; e2e is rescaled accordingly (default: 16)",
     )
     parser.add_argument(
         "--ensemble_numerosity",
         type=int,
         default=6,
         metavar="<batch_size>",
-        help="Size of the ensemble used to perform inference (default: 6)",
+        help="Size of the ensemble used to perform inference (default: 4)",
     )
     args = parser.parse_args()
     return args
@@ -86,7 +86,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # Dataset/DataLoader
     # Repeated twice just to allow gathering of dataset for DistributedSampler
-    batchsize_adaptation_ratio = 38
+    batchsize_adaptation_ratio = 2
     _, test_dl, _ = cifarten_dataloader_dispatcher(
         batch_size_train=1,
         batch_size_test=args.batchsize
@@ -189,7 +189,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     test_dl.sampler.set_epoch(0)  # type: ignore
 
-    for _, (true_data, true_label) in tqdm(  # type: ignore
+    for idxidx, (true_data, true_label) in tqdm(  # type: ignore
         iterable=enumerate(test_dl),
         total=len(test_dl),
         desc="Testing batch",
@@ -264,6 +264,12 @@ def main_run(args: argparse.Namespace) -> None:
                     trueclass, adversarialadv
                 ).count_nonzero()
             carso_adv_correct_global += th.eq(trueclass, carsoadv).count_nonzero()
+
+            # ------------------------------------------------------------------
+            # Stop the tiny test
+            if idxidx >= 2:
+                break
+            # ------------------------------------------------------------------
 
     # --------------------------------------------------------------------------
 

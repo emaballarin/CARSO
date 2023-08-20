@@ -64,7 +64,7 @@ def main_parse() -> argparse.Namespace:
         type=int,
         default=1280,
         metavar="<batch_size>",
-        help="Per-GPU batch size for training (default: 1024)",
+        help="Per-GPU batch size for training (default: 1280)",
     )
     parser.add_argument(
         "--advfrac",

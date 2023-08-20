@@ -53,14 +53,14 @@ def main() -> None:
         type=int,
         default=800,
         metavar="<batch_size>",
-        help="Batch size for testing, model-only; e2e is rescaled accordingly (default: 1536)",
+        help="Batch size for testing, model-only; e2e is rescaled accordingly (default: 800)",
     )
     parser.add_argument(
         "--ensemble_numerosity",
         type=int,
         default=6,
         metavar="<batch_size>",
-        help="Size of the ensemble used to perform inference (default: 4)",
+        help="Size of the ensemble used to perform inference (default: 6)",
     )
     args = parser.parse_args()
 
