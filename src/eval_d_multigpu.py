@@ -7,7 +7,6 @@
 #
 # ------------------------------------------------------------------------------
 import argparse
-import os
 
 import autoattack as aatk
 import torch as th
@@ -15,6 +14,8 @@ import torch.distributed as dist
 from carso import CARSOWrap
 from ebtorch.data import cifarten_dataloader_dispatcher
 from ebtorch.data import data_prep_dispatcher_3ch
+from ebtorch.distributed import reduce_accumulate_keepalive
+from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import WideResNet
 from torch.utils.data.distributed import DistributedSampler
 from tqdm.auto import tqdm
@@ -60,7 +61,7 @@ def main_parse() -> argparse.Namespace:
     parser.add_argument(
         "--ensemble_numerosity",
         type=int,
-        default=6,
+        default=8,
         metavar="<batch_size>",
         help="Size of the ensemble used to perform inference (default: 6)",
     )
@@ -74,24 +75,31 @@ def main_parse() -> argparse.Namespace:
 def main_run(args: argparse.Namespace) -> None:
     # --------------------------------------------------------------------------
     # Distributed devices setup
-    rank = int(os.environ["SLURM_PROCID"])
-    world_size = int(os.environ["WORLD_SIZE"])
-    gpus_per_node = int(os.environ["SLURM_GPUS_ON_NODE"])
-    cpus_per_task = int(os.environ["OMP_NUM_THREADS"])
+    (
+        rank,
+        world_size,
+        _,
+        cpus_per_task,
+        local_rank,
+        device,
+    ) = slurm_nccl_env()
+
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
-    local_rank = int(rank - gpus_per_node * (rank // gpus_per_node))
-    device = "cuda:" + str(local_rank)
     th.cuda.set_device(device)
     # --------------------------------------------------------------------------
 
     # Dataset/DataLoader
+    bsar = (
+        (1.12 if world_size <= 1 else 1.2)
+        * 800
+        / (max(800, args.batchsize) * max(4, args.ensemble_numerosity))
+    )
     # Repeated twice just to allow gathering of dataset for DistributedSampler
-    batchsize_adaptation_ratio = 38
     _, test_dl, _ = cifarten_dataloader_dispatcher(
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
-        else args.batchsize // batchsize_adaptation_ratio,
+        else (args.batchsize * bsar),
         cuda_accel=True,
         shuffle_test=False,
         unshuffle_train=True,
@@ -100,7 +108,7 @@ def main_run(args: argparse.Namespace) -> None:
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
-        else args.batchsize // batchsize_adaptation_ratio,
+        else (args.batchsize * bsar),
         cuda_accel=True,
         shuffle_test=False,
         unshuffle_train=True,
@@ -204,16 +212,14 @@ def main_run(args: argparse.Namespace) -> None:
             fake_data_adv = attack_adv_model.run_standard_evaluation(
                 true_data,
                 true_label,
-                bs=args.batchsize
-                if not args.e2e
-                else args.batchsize // batchsize_adaptation_ratio,
+                bs=args.batchsize if not args.e2e else (args.batchsize * bsar),
             )
         else:
             true_repr = carso_machinery.get_head_if_headless(true_data).detach().clone()
             fake_repr_adv = attack_adv_model.run_standard_evaluation(
                 true_repr,
                 true_label,
-                bs=args.batchsize // batchsize_adaptation_ratio,
+                bs=(args.batchsize * bsar),
             )
 
         if args.e2e or args.noextract:

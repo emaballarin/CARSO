@@ -7,7 +7,6 @@
 #
 # ------------------------------------------------------------------------------
 import argparse
-import os
 
 import torch as th
 import torch.distributed as dist
@@ -15,11 +14,12 @@ import wandb
 from carso import CARSOWrap
 from ebtorch.data import cifarten_dataloader_dispatcher
 from ebtorch.data import data_prep_dispatcher_3ch
+from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn import WideResNet
 from ebtorch.nn.utils import AdverApply
+from ebtorch.optim import expneal
 from ebtorch.optim import Lookahead
-from ebtorch.optim import onecycle_lincos
 from ebtorch.optim import ralah_optim
 from ebtorch.optim import tricyc1c
 from tooling.attacks import attacks_dispatcher
@@ -83,13 +83,16 @@ def main_parse() -> argparse.Namespace:
 def main_run(args: argparse.Namespace) -> None:
     # --------------------------------------------------------------------------
     # Distributed devices setup
-    rank = int(os.environ["SLURM_PROCID"])
-    world_size = int(os.environ["WORLD_SIZE"])
-    gpus_per_node = int(os.environ["SLURM_GPUS_ON_NODE"])
-    cpus_per_task = int(os.environ["OMP_NUM_THREADS"])
+    (
+        rank,
+        world_size,
+        _,
+        cpus_per_task,
+        local_rank,
+        device,
+    ) = slurm_nccl_env()
+
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
-    local_rank = int(rank - gpus_per_node * (rank // gpus_per_node))
-    device = "cuda:" + str(local_rank)
     th.cuda.set_device(device)
     # --------------------------------------------------------------------------
 
@@ -186,12 +189,13 @@ def main_run(args: argparse.Namespace) -> None:
             total_steps=args.epochs,
         )
     else:
-        optimizer, scheduler = onecycle_lincos(
+        optimizer, scheduler = expneal(
             optim=optimizer,
             init_lr=min_lr_magic_constant,
             max_lr=0.1,
-            final_lr=1e-5,
-            up_frac=up_frac_magic_constant,
+            final_lr=1e-6,
+            up_frac=0.1,
+            steady_frac=1 / args.epochs,
             total_steps=args.epochs,
         )
 
