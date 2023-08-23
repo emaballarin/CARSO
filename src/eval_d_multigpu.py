@@ -99,7 +99,7 @@ def main_run(args: argparse.Namespace) -> None:
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
-        else (args.batchsize * bsar),
+        else int(args.batchsize * bsar),
         cuda_accel=True,
         shuffle_test=False,
         unshuffle_train=True,
@@ -108,7 +108,7 @@ def main_run(args: argparse.Namespace) -> None:
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
-        else (args.batchsize * bsar),
+        else int(args.batchsize * bsar),
         cuda_accel=True,
         shuffle_test=False,
         unshuffle_train=True,
@@ -188,12 +188,12 @@ def main_run(args: argparse.Namespace) -> None:
     )
 
     # --------------------------------------------------------------------------
-
-    number_of_elem_global = th.tensor(0).to(device)
-    adversarial_clean_correct_global = th.tensor(0).to(device)
-    adversarial_attacked_correct_global = th.tensor(0).to(device)
-    carso_correct_global = th.tensor(0).to(device)
-    carso_adv_correct_global = th.tensor(0).to(device)
+    # Evaluation counters
+    number_of_elem_global_item: int = 0
+    adversarial_clean_correct_global_item: int = 0
+    adversarial_attacked_correct_global_item: int = 0
+    carso_correct_global_item: int = 0
+    carso_adv_correct_global_item: int = 0
 
     test_dl.sampler.set_epoch(0)  # type: ignore
 
@@ -212,14 +212,14 @@ def main_run(args: argparse.Namespace) -> None:
             fake_data_adv = attack_adv_model.run_standard_evaluation(
                 true_data,
                 true_label,
-                bs=args.batchsize if not args.e2e else (args.batchsize * bsar),
+                bs=args.batchsize if not args.e2e else int(args.batchsize * bsar),
             )
         else:
             true_repr = carso_machinery.get_head_if_headless(true_data).detach().clone()
             fake_repr_adv = attack_adv_model.run_standard_evaluation(
                 true_repr,
                 true_label,
-                bs=(args.batchsize * bsar),
+                bs=int(args.batchsize * bsar),
             )
 
         if args.e2e or args.noextract:
@@ -260,39 +260,45 @@ def main_run(args: argparse.Namespace) -> None:
             carsoadv = carso_pertu_class.flatten()
 
             # Record results
-            number_of_elem_global += true_data.shape[0]
-            adversarial_clean_correct_global += th.eq(
+            number_of_elem_global = true_data.shape[0]
+            adversarial_clean_correct_global = th.eq(
                 trueclass, adversarialclass
             ).count_nonzero()
-            carso_correct_global += th.eq(trueclass, carsoclass).count_nonzero()
+            carso_correct_global = th.eq(trueclass, carsoclass).count_nonzero()
             if not args.noextract:
-                adversarial_attacked_correct_global += th.eq(
+                adversarial_attacked_correct_global = th.eq(
                     trueclass, adversarialadv
                 ).count_nonzero()
-            carso_adv_correct_global += th.eq(trueclass, carsoadv).count_nonzero()
+            carso_adv_correct_global = th.eq(trueclass, carsoadv).count_nonzero()
+            with th.no_grad():
+                number_of_elem_global_item = reduce_accumulate_keepalive(
+                    number_of_elem_global, number_of_elem_global_item
+                )
+                adversarial_clean_correct_global_item = reduce_accumulate_keepalive(
+                    adversarial_clean_correct_global,
+                    adversarial_clean_correct_global_item,
+                )
+                adversarial_attacked_correct_global_item = reduce_accumulate_keepalive(
+                    adversarial_attacked_correct_global,
+                    adversarial_attacked_correct_global_item,
+                )
+                carso_correct_global_item = reduce_accumulate_keepalive(
+                    carso_correct_global, carso_correct_global_item
+                )
+                carso_adv_correct_global_item = reduce_accumulate_keepalive(
+                    carso_adv_correct_global, carso_adv_correct_global_item
+                )
 
-    # --------------------------------------------------------------------------
-
-    # Sum across all GPUs
-    dist.barrier()
-    with th.no_grad():
-        dist.reduce(number_of_elem_global, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(adversarial_clean_correct_global, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(carso_correct_global, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(adversarial_attacked_correct_global, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(carso_adv_correct_global, dst=0, op=dist.ReduceOp.SUM)
-
-        # Compute accuracies
-        dist.barrier()
+        # --------------------------------------------------------------------------
         if local_rank == 0:
-            number_of_elem_global = number_of_elem_global.item()
-            adv_acc = adversarial_clean_correct_global.item() / number_of_elem_global
-            carso_acc = carso_correct_global.item() / number_of_elem_global
+            adv_acc = adversarial_clean_correct_global_item / number_of_elem_global_item
+            carso_acc = carso_correct_global_item / number_of_elem_global_item
             if not args.noextract:
                 adv_adv_acc = (
-                    adversarial_attacked_correct_global.item() / number_of_elem_global
+                    adversarial_attacked_correct_global_item
+                    / number_of_elem_global_item
                 )
-            carso_adv_acc = carso_adv_correct_global.item() / number_of_elem_global
+            carso_adv_acc = carso_adv_correct_global_item / number_of_elem_global_item
             # ------------------------------------------------------------------
 
             # Printout
