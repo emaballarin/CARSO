@@ -14,7 +14,6 @@ import torch.distributed as dist
 from carso import CARSOWrap
 from ebtorch.data import cifarten_dataloader_dispatcher
 from ebtorch.data import data_prep_dispatcher_3ch
-from ebtorch.distributed import reduce_accumulate_keepalive
 from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import WideResNet
 from torch.utils.data.distributed import DistributedSampler
@@ -192,7 +191,6 @@ def main_run(args: argparse.Namespace) -> None:
     # Evaluation counters
     number_of_elem_global_item: int = 0
     adversarial_clean_correct_global_item: int = 0
-    adversarial_attacked_correct_global_item: int = 0
     carso_correct_global_item: int = 0
     carso_adv_correct_global_item: int = 0
 
@@ -236,10 +234,6 @@ def main_run(args: argparse.Namespace) -> None:
             adversarial_clean_class = adversarial_classifier(true_data).argmax(
                 dim=1, keepdim=True
             )
-            if not args.noextract:
-                adversarial_pertu_class = adversarial_classifier(fake_data_adv).argmax(
-                    dim=1, keepdim=True
-                )
 
             # ------------------------------------------------------------------
             if not args.noextract:
@@ -256,49 +250,23 @@ def main_run(args: argparse.Namespace) -> None:
             trueclass = true_label.flatten()
             adversarialclass = adversarial_clean_class.flatten()
             carsoclass = carso_clean_class.flatten()
-            if not args.noextract:
-                adversarialadv = adversarial_pertu_class.flatten()
             carsoadv = carso_pertu_class.flatten()
 
             # Record results
-            number_of_elem_global = true_data.shape[0]
-            adversarial_clean_correct_global = th.eq(
-                trueclass, adversarialclass
-            ).count_nonzero()
-            carso_correct_global = th.eq(trueclass, carsoclass).count_nonzero()
-            if not args.noextract:
-                adversarial_attacked_correct_global = th.eq(
-                    trueclass, adversarialadv
-                ).count_nonzero()
-            carso_adv_correct_global = th.eq(trueclass, carsoadv).count_nonzero()
-            with th.no_grad():
-                number_of_elem_global_item = reduce_accumulate_keepalive(
-                    number_of_elem_global, number_of_elem_global_item
-                )
-                adversarial_clean_correct_global_item = reduce_accumulate_keepalive(
-                    adversarial_clean_correct_global,
-                    adversarial_clean_correct_global_item,
-                )
-                adversarial_attacked_correct_global_item = reduce_accumulate_keepalive(
-                    adversarial_attacked_correct_global,
-                    adversarial_attacked_correct_global_item,
-                )
-                carso_correct_global_item = reduce_accumulate_keepalive(
-                    carso_correct_global, carso_correct_global_item
-                )
-                carso_adv_correct_global_item = reduce_accumulate_keepalive(
-                    carso_adv_correct_global, carso_adv_correct_global_item
-                )
-
+            number_of_elem_global_item += true_data.shape[0].item()
+            adversarial_clean_correct_global_item += (
+                th.eq(trueclass, adversarialclass).count_nonzero().item()
+            )
+            carso_correct_global_item += (
+                th.eq(trueclass, carsoclass).count_nonzero().item()
+            )
+            carso_adv_correct_global_item += (
+                th.eq(trueclass, carsoadv).count_nonzero().item()
+            )
         # --------------------------------------------------------------------------
         if local_rank == 0:
             adv_acc = adversarial_clean_correct_global_item / number_of_elem_global_item
             carso_acc = carso_correct_global_item / number_of_elem_global_item
-            if not args.noextract:
-                adv_adv_acc = (
-                    adversarial_attacked_correct_global_item
-                    / number_of_elem_global_item
-                )
             carso_adv_acc = carso_adv_correct_global_item / number_of_elem_global_item
             # ------------------------------------------------------------------
 
@@ -307,8 +275,6 @@ def main_run(args: argparse.Namespace) -> None:
             print(f"ADVERSARIAL ACCURACY              : {adv_acc}")
             print(f"CARSO ACCURACY                    : {carso_acc}")
             print("\n")
-            if not args.noextract:
-                print(f"ADVERSARIAL ACCURACY UNDER ATTACK : {adv_adv_acc}")
             print(f"CARSO ACCURACY UNDER ATTACK       : {carso_adv_acc}")
             print("\n\n")
 
