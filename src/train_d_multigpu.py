@@ -18,10 +18,9 @@ from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn import WideResNet
 from ebtorch.nn.utils import AdverApply
-from ebtorch.optim import expneal
 from ebtorch.optim import Lookahead
+from ebtorch.optim import onecycle_linlin
 from ebtorch.optim import ralah_optim
-from ebtorch.optim import tricyc1c
 from tooling.attacks import attacks_dispatcher
 from torch.nn.parallel import DistributedDataParallel as DiDaPar
 from torch.utils.data.distributed import DistributedSampler
@@ -45,12 +44,6 @@ def main_parse() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Log selected metdata to Weights & Biases (default: False)",
-    )
-    parser.add_argument(
-        "--newsched",
-        action="store_true",
-        default=False,
-        help="Use the new learning rate scheduler (default: False)",
     )
     parser.add_argument(
         "--epochs",
@@ -177,27 +170,14 @@ def main_run(args: argparse.Namespace) -> None:
 
     optimizer = ralah_optim(carso_machinery.parameters(), radam_lr=0.0, la_steps=6)
 
-    min_lr_magic_constant = 5e-9
-    up_frac_magic_constant: float = 0.25
-
-    if not args.newsched:
-        optimizer, scheduler = tricyc1c(
-            optimizer,
-            min_lr=min_lr_magic_constant,
-            max_lr=0.85 * 1e-5 * args.batchsize * world_size,
-            up_frac=up_frac_magic_constant,
-            total_steps=args.epochs,
-        )
-    else:
-        optimizer, scheduler = expneal(
-            optim=optimizer,
-            init_lr=min_lr_magic_constant,
-            max_lr=0.1,
-            final_lr=1e-6,
-            up_frac=0.1,
-            steady_frac=1 / args.epochs,
-            total_steps=args.epochs,
-        )
+    optimizer, scheduler = onecycle_linlin(
+        optim=optimizer,
+        init_lr=5e-9,
+        max_lr=6.25e-4 * args.batchsize * world_size,
+        final_lr=1.5e-9 * args.batchsize * world_size,
+        up_frac=0.25,
+        total_steps=args.epochs,
+    )
 
     adversaries = attacks_dispatcher(model=vanilla_classifier, dataset="cifarnorm")
     adversarial_apply = AdverApply(adversaries=adversaries)

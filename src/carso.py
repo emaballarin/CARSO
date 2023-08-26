@@ -57,7 +57,7 @@ def carso_ensembled_classifier_atomic(
     return eca_ensembled_classifier(
         eca_dec(
             th.cat(
-                (
+                tensors=(
                     sampler(
                         (
                             eca_compressed_repr_shape_zero,
@@ -146,31 +146,31 @@ class CARSOWrap(thnn.Module):
         # Raise warnings and auto-set values
         if input_data_no_compress:
             warnings.warn(
-                "If input_data_no_compress is True, compressed_input_data_size and convolutional_input_compressor values are ignored!",
-                UserWarning,
+                message="If input_data_no_compress is True, compressed_input_data_size and convolutional_input_compressor values are ignored!",
+                category=UserWarning,
             )
             compressed_input_data_size = input_data_size
             convolutional_input_compressor = False
 
         if input_data_conv_flatten:
             warnings.warn(
-                "If input_data_conv_flatten is True, compressed_input_data_size and convolutional_input_compressor values are ignored!",
-                UserWarning,
+                message="If input_data_conv_flatten is True, compressed_input_data_size and convolutional_input_compressor values are ignored!",
+                category=UserWarning,
             )
             convolutional_input_compressor = True
 
         if repr_data_no_compress:
             warnings.warn(
-                "If repr_data_no_compress is True, compressed_repr_data_size and small_neck_repr_compressor values are ignored!",
-                UserWarning,
+                message="If repr_data_no_compress is True, compressed_repr_data_size and small_neck_repr_compressor values are ignored!",
+                category=UserWarning,
             )
             compressed_repr_data_size = wrapped_repr_size
             slim_neck_repr_compressor = False
 
         if suppress_stochastic_inference:
             warnings.warn(
-                "If suppress_stochastic_inference is True, ensemble_numerosity value is ignored!",
-                UserWarning,
+                message="If suppress_stochastic_inference is True, ensemble_numerosity value is ignored!",
+                category=UserWarning,
             )
             ensemble_numerosity = 1
         # ----------------------------------------------------------------------
@@ -199,7 +199,7 @@ class CARSOWrap(thnn.Module):
             compressed_input_data_size = self.input_compressor.output_numel()
         elif convolutional_input_compressor:
             self.input_compressor: thnn.Module = cnn_compressor_dispatcher_flatout(
-                input_data_channels, 128
+                input_data_channels, channels_out=128
             )
             raise NotImplementedError(
                 "compressed_input_data_size computation not yet implemented (and never will, probably)!"
@@ -295,8 +295,8 @@ class CARSOWrap(thnn.Module):
                     f"Change of training mode from {self.training} to {mode} detected, but denied since the model has been hardened."
                 )
             warnings.warn(
-                f"Change of training mode from {self.training} to {mode} detected. Allowing it.",
-                UserWarning,
+                message=f"Change of training mode from {self.training} to {mode} detected. Allowing it.",
+                category=UserWarning,
             )
 
         if not isinstance(mode, bool):
@@ -420,7 +420,7 @@ class CARSOWrap(thnn.Module):
             compressed_input: th.Tensor = self.input_compressor(x_input)
             compressed_repr: th.Tensor = self.repr_compressor(extracted_repr)
             cvae_encoder_input: th.Tensor = th.cat(
-                (compressed_input, compressed_repr), dim=1
+                tensors=(compressed_input, compressed_repr), dim=1
             )
             cvae_precompressed: th.Tensor = self.enc_neck(cvae_encoder_input)
 
@@ -432,7 +432,7 @@ class CARSOWrap(thnn.Module):
             dist_params: Tuple[th.Tensor, th.Tensor] = (cvae_mu, cvae_sigma)
             cvae_encoded: th.Tensor = self.grps(cvae_mu, cvae_sigma)
             cvae_decoder_input: th.Tensor = th.cat(
-                (cvae_encoded, compressed_repr), dim=1
+                tensors=(cvae_encoded, compressed_repr), dim=1
             )
 
             return self.dec(cvae_decoder_input).reshape(*x_input.shape), dist_params

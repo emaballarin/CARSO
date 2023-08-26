@@ -62,7 +62,7 @@ def main_parse() -> argparse.Namespace:
         type=int,
         default=8,
         metavar="<batch_size>",
-        help="Size of the ensemble used to perform inference (default: 6)",
+        help="Size of the ensemble used to perform inference (default: 8)",
     )
     args = parser.parse_args()
     return args
@@ -89,7 +89,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # Dataset/DataLoader
     bsar = (
-        0.25
+        0.075
         * (1.12 if world_size <= 1 else 1.2)
         * 800
         / (max(800, args.batchsize) * max(4, args.ensemble_numerosity))
@@ -253,7 +253,7 @@ def main_run(args: argparse.Namespace) -> None:
             carsoadv = carso_pertu_class.flatten()
 
             # Record results
-            number_of_elem_global_item += true_data.shape[0].item()
+            number_of_elem_global_item += true_data.shape[0]
             adversarial_clean_correct_global_item += (
                 th.eq(trueclass, adversarialclass).count_nonzero().item()
             )
