@@ -173,7 +173,7 @@ def main_run(args: argparse.Namespace) -> None:
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=1.25e-4 * args.batchsize * world_size,
+        max_lr=1.0e-4 * args.batchsize * world_size,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,
