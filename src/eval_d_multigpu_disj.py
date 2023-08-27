@@ -263,20 +263,20 @@ def main_run(args: argparse.Namespace) -> None:
             carso_adv_correct_global_item += (
                 th.eq(trueclass, carsoadv).count_nonzero().item()
             )
-        # --------------------------------------------------------------------------
-        if local_rank == 0:
-            adv_acc = adversarial_clean_correct_global_item / number_of_elem_global_item
-            carso_acc = carso_correct_global_item / number_of_elem_global_item
-            carso_adv_acc = carso_adv_correct_global_item / number_of_elem_global_item
-            # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    if local_rank == 0:
+        adv_acc = adversarial_clean_correct_global_item / number_of_elem_global_item
+        carso_acc = carso_correct_global_item / number_of_elem_global_item
+        carso_adv_acc = carso_adv_correct_global_item / number_of_elem_global_item
+        # ------------------------------------------------------------------
 
-            # Printout
-            print("\n\n")
-            print(f"ADVERSARIAL ACCURACY              : {adv_acc}")
-            print(f"CARSO ACCURACY                    : {carso_acc}")
-            print("\n")
-            print(f"CARSO ACCURACY UNDER ATTACK       : {carso_adv_acc}")
-            print("\n\n")
+        # Printout
+        print("\n\n")
+        print(f"ADVERSARIAL ACCURACY              : {adv_acc}")
+        print(f"CARSO ACCURACY                    : {carso_acc}")
+        print("\n")
+        print(f"CARSO ACCURACY UNDER ATTACK       : {carso_adv_acc}")
+        print("\n\n")
 
     # --------------------------------------------------------------------------
 
