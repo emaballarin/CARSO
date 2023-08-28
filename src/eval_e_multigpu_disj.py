@@ -12,7 +12,7 @@ import autoattack as aatk
 import torch as th
 import torch.distributed as dist
 from carso import CARSOWrap
-from ebtorch.data import cifarten_dataloader_dispatcher
+from ebtorch.data import cifarhundred_dataloader_dispatcher
 from ebtorch.data import data_prep_dispatcher_3ch
 from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import WideResNet
@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 # ------------------------------------------------------------------------------
 def main_parse() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="WideResNet-28-10+CARSO on CIFAR10 inference and comparison"
+        description="WideResNet-28-10+CARSO on CIFAR100 inference and comparison"
     )
     parser.add_argument(
         "--e2e",
@@ -95,7 +95,7 @@ def main_run(args: argparse.Namespace) -> None:
         / (max(800, args.batchsize) * max(4, args.ensemble_numerosity))
     )
     # Repeated twice just to allow gathering of dataset for DistributedSampler
-    _, test_dl, _ = cifarten_dataloader_dispatcher(
+    _, test_dl, _ = cifarhundred_dataloader_dispatcher(
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
@@ -104,7 +104,7 @@ def main_run(args: argparse.Namespace) -> None:
         shuffle_test=False,
         unshuffle_train=True,
     )
-    _, test_dl, _ = cifarten_dataloader_dispatcher(
+    _, test_dl, _ = cifarhundred_dataloader_dispatcher(
         batch_size_train=1,
         batch_size_test=args.batchsize
         if not (args.e2e or args.noextract)
@@ -121,9 +121,9 @@ def main_run(args: argparse.Namespace) -> None:
 
     # --------------------------------------------------------------------------
 
-    adversarial_classifier = WideResNet(bn_momentum=0.01)
+    adversarial_classifier = WideResNet(num_classes=100, bn_momentum=0.01)
     adversarial_classifier.load_state_dict(
-        th.load("../models/cifar10_a3_b10_t4_20m_w.pt")
+        th.load("../models/cifar100_a5_b12_t4_50m_w.pt")
     )
     adversarial_classifier.to(device).eval()
 
@@ -133,7 +133,7 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=573450,
+        wrapped_repr_size=573540,
         compressed_repr_data_size=512,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
@@ -157,10 +157,10 @@ def main_run(args: argparse.Namespace) -> None:
     )
 
     carso_machinery.repr_compressor.load_state_dict(
-        th.load("../models/carso_reprcompressor_cuiwrn2810_cifar10_adv.pth")
+        th.load("../models/carso_reprcompressor_cuiwrn2810_cifar100_adv.pth")
     )
     carso_machinery.dec.load_state_dict(
-        th.load("../models/carso_dec_cuiwrn2810_cifar10_adv.pth")
+        th.load("../models/carso_dec_cuiwrn2810_cifar100_adv.pth")
     )
     carso_machinery.to(device).eval()
 
