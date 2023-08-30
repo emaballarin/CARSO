@@ -9,6 +9,7 @@
 from copy import deepcopy
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from ebtorch import nn as ebthnn
 from torch import nn as thnn
@@ -182,7 +183,7 @@ def encdec_dispatcher(
     output_size: Optional[int] = None,
     input_channels: Optional[int] = None,
     deconvolutional: bool = False,
-    cifar: bool = True,
+    cifar: Union[bool, int] = 10,
 ) -> Tuple[thnn.Module, thnn.Module, thnn.Module, thnn.Module]:
     if output_size is None:
         output_size = data_size + condition_size
@@ -215,8 +216,8 @@ def encdec_dispatcher(
     # Decoder
     if deconvolutional:
         del output_size
-        if cifar:
-            # CIFAR-10/100
+        if cifar == 10:
+            # CIFAR-10
             dec: thnn.Module = thnn.Sequential(
                 ebthnn.FlatChannelize2DLayer(),
                 _deconv_block(
@@ -252,7 +253,52 @@ def encdec_dispatcher(
                     final=True,
                 ),
             )
-        else:
+        elif cifar == 100:
+            # CIFAR-100
+            dec: thnn.Module = thnn.Sequential(
+                ebthnn.FlatChannelize2DLayer(),
+                _deconv_block(
+                    in_channels=input_channels,
+                    out_channels=input_channels // 2,
+                    kernel_size=4,
+                    stride=1,
+                    padding=1,
+                    final=False,
+                ),
+                _deconv_block(
+                    in_channels=input_channels // 2,
+                    out_channels=input_channels // 4,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                    final=False,
+                ),
+                _deconv_block(
+                    in_channels=input_channels // 4,
+                    out_channels=input_channels // 8,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                    final=False,
+                ),
+                _deconv_block(
+                    in_channels=input_channels // 8,
+                    out_channels=input_channels // 16,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                    final=False,
+                ),
+                _deconv_block(
+                    in_channels=input_channels // 16,
+                    out_channels=3,  # RGB
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                    final=True,
+                ),
+            )
+        elif cifar == 0:
             # MNIST/Fashion-MNIST
             dec: thnn.Module = thnn.Sequential(
                 ebthnn.FlatChannelize2DLayer(),
@@ -292,6 +338,10 @@ def encdec_dispatcher(
                     final=True,
                     do_bn=False,
                 ),
+            )
+        else:
+            raise ValueError(
+                "Invalid value for `cifar` parameter: must be either 10, 100, or 0 (:= (F)MNIST)"
             )
     else:
         del input_channels

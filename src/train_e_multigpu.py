@@ -133,7 +133,7 @@ def main_run(args: argparse.Namespace) -> None:
         repr_data_no_compress=False,
         slim_neck_repr_compressor=True,
         is_deconvolutional_decoder=True,
-        is_cifar_decoder=True,
+        is_cifar_decoder=100,
         binarize_repr=False,
         input_preprocessor=data_prep_dispatcher_3ch(device, post_flatten=False),
         # Forced/Dummy
@@ -173,7 +173,7 @@ def main_run(args: argparse.Namespace) -> None:
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=1.0e-4 * args.batchsize * world_size,
+        max_lr=(4.0 / 8.0) * 1.0e-4 * args.batchsize * world_size,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,

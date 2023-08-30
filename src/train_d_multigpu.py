@@ -133,7 +133,7 @@ def main_run(args: argparse.Namespace) -> None:
         repr_data_no_compress=False,
         slim_neck_repr_compressor=True,
         is_deconvolutional_decoder=True,
-        is_cifar_decoder=True,
+        is_cifar_decoder=10,
         binarize_repr=False,
         input_preprocessor=data_prep_dispatcher_3ch(device, post_flatten=False),
         # Forced/Dummy

@@ -140,7 +140,7 @@ def main() -> None:
         repr_data_no_compress=False,
         slim_neck_repr_compressor=True,
         is_deconvolutional_decoder=True,
-        is_cifar_decoder=False,
+        is_cifar_decoder=0,
         binarize_repr=False,
         input_preprocessor=(
             data_prep_dispatcher_1ch(device=device, post_flatten=False)

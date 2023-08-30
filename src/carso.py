@@ -101,7 +101,7 @@ class CARSOWrap(thnn.Module):
         repr_data_no_compress: bool = False,
         slim_neck_repr_compressor: bool = True,
         is_deconvolutional_decoder: bool = True,
-        is_cifar_decoder: bool = True,
+        is_cifar_decoder: Union[bool, int] = 10,
         binarize_repr: bool = False,
         input_preprocessor: Optional[thnn.Module] = None,
         differentiable_inference: bool = False,
