@@ -201,7 +201,7 @@ def encdec_dispatcher(
             out_size=shared_musigma_layer_size,
             bias=True,
             activation_fx=thnn.ModuleList(modules=(thnn.LeakyReLU(), thnn.LeakyReLU())),
-            dropout=[0.075 / 2, False],
+            dropout=[False, False],
             batchnorm=[True, True],
         ),
         thnn.Tanh(),
@@ -370,7 +370,7 @@ def encdec_dispatcher(
                 activation_fx=thnn.ModuleList(
                     modules=(thnn.LeakyReLU(), thnn.LeakyReLU(), thnn.LeakyReLU())
                 ),
-                dropout=[0.075, 0.075 / 2, False],
+                dropout=[False, False, False],
                 batchnorm=[True, True, False],
             ),
             thnn.Sigmoid(),

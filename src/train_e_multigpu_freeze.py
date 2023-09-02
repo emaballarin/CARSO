@@ -124,10 +124,10 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=573540,
-        compressed_repr_data_size=768,
-        shared_musigma_layer_size=192,
-        sampled_code_size=128,
+        wrapped_repr_size=532580,
+        compressed_repr_data_size=2048,
+        shared_musigma_layer_size=128,
+        sampled_code_size=96,
         input_data_no_compress=False,
         input_data_conv_flatten=True,
         repr_data_no_compress=False,
@@ -163,24 +163,16 @@ def main_run(args: argparse.Namespace) -> None:
         "layer.1.block.2.conv_1",
         "layer.2.block.0.shortcut",
         "layer.2.block.1.conv_1",
-        "layer.2.block.2.conv_1",
         "layer.2.block.3.conv_1",
         "logits",
     )
 
-    optimizer = (
-        ralah_optim(
-            carso_machinery.parameters(),
-            radam_lr=0.0,
-            la_steps=5,
-            radam_betas=(0.9, 0.99),
-        ),
-    )
+    optimizer = ralah_optim(carso_machinery.parameters(), radam_lr=0.0, la_steps=6)
 
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=(4.0 / 8.0) * 1.0e-4 * args.batchsize * world_size,
+        max_lr=0.04,  # (4.0 / 8.0) * 1.0e-4 * args.batchsize * world_size,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,
@@ -192,7 +184,7 @@ def main_run(args: argparse.Namespace) -> None:
     # --------------------------------------------------------------------------
 
     # WandB logging
-    if args.wandb and rank == 0:
+    if args.wandb and local_rank == 0:
         wandb.init(
             project="carso-for-neurips-2023",
             config={
@@ -212,7 +204,7 @@ def main_run(args: argparse.Namespace) -> None:
     # --------------------------------------------------------------------------
     carso_machinery.train()
 
-    for epoch_idx in trange(args.epochs, desc="Training epoch", disable=(rank != 0)):  # type: ignore
+    for epoch_idx in trange(args.epochs, desc="Training epoch", disable=(local_rank != 0)):  # type: ignore
         # ----------------------------------------------------------------------
         # Every epoch
         train_dl.sampler.set_epoch(epoch_idx)  # type: ignore
@@ -221,7 +213,7 @@ def main_run(args: argparse.Namespace) -> None:
             total=len(train_dl),
             desc="Batch within epoch",
             leave=False,
-            disable=(rank != 0),
+            disable=(local_rank != 0),
         ):
             batched_datapoint = adversarial_apply(
                 batched_datapoint,
@@ -246,7 +238,7 @@ def main_run(args: argparse.Namespace) -> None:
         # ----------------------------------------------------------------------
         loss_to_log = loss.detach().clone()
         dist.reduce(loss_to_log, dst=0, op=dist.ReduceOp.SUM)
-        if args.wandb and rank == 0:
+        if args.wandb and local_rank == 0:
             loss_to_log = loss_to_log / (world_size**2 * args.batchsize)
             wandb.log(
                 {
@@ -259,7 +251,7 @@ def main_run(args: argparse.Namespace) -> None:
         # ----------------------------------------------------------------------
 
     # --------------------------------------------------------------------------
-    if (args.save_model or args.wandb) and rank == 0:
+    if (args.save_model or args.wandb) and local_rank == 0:
         model_namepath_compressor = (
             "../models/carso_reprcompressor_cuiwrn2810_cifar100_adv.pth"
         )
@@ -272,7 +264,7 @@ def main_run(args: argparse.Namespace) -> None:
         )
         th.save(carso_machinery.module.dec.state_dict(), model_namepath_dec)
 
-    if args.wandb and rank == 0:
+    if args.wandb and local_rank == 0:
         repr_compressor = wandb.Artifact(
             "carso_reprcompressor_cuiwrn2810_cifar100_adv", type="model"
         )
@@ -283,7 +275,7 @@ def main_run(args: argparse.Namespace) -> None:
         wandb.log_artifact(carso_dec)
 
     # --------------------------------------------------------------------------
-    if args.wandb and rank == 0:
+    if args.wandb and local_rank == 0:
         wandb.finish()
 
     # --------------------------------------------------------------------------

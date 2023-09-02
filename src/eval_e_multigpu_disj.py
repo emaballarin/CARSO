@@ -133,7 +133,7 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=737380,
+        wrapped_repr_size=614500,
         compressed_repr_data_size=768,
         shared_musigma_layer_size=288,
         sampled_code_size=128,
@@ -176,13 +176,13 @@ def main_run(args: argparse.Namespace) -> None:
         attack_adv_model = aatk.AutoAttack(adversarial_classifier, **atk_dict_args)
 
     repr_layers = (
-        "layer.0.block.0.conv_1",
         "layer.0.block.1.conv_1",
         "layer.1.block.0.shortcut",
         "layer.1.block.1.conv_1",
         "layer.1.block.2.conv_1",
         "layer.2.block.0.shortcut",
         "layer.2.block.1.conv_1",
+        "layer.2.block.2.conv_0",
         "layer.2.block.2.conv_1",
         "layer.2.block.3.conv_1",
         "logits",
