@@ -71,10 +71,10 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=532580,
-        compressed_repr_data_size=2048,
-        shared_musigma_layer_size=128,
-        sampled_code_size=96,
+        wrapped_repr_size=245860,
+        compressed_repr_data_size=2304,
+        shared_musigma_layer_size=192,
+        sampled_code_size=128,
         ensemble_numerosity=args.ensemble_numerosity,
         input_data_no_compress=False,
         input_data_conv_flatten=True,
@@ -103,15 +103,10 @@ def main_run(args: argparse.Namespace) -> None:
     carso_machinery.to(device).eval()
 
     repr_layers = (
-        "layer.0.block.1.conv_1",
-        "layer.1.block.0.shortcut",
+        "layer.1.block.0.conv_0",
         "layer.1.block.1.conv_1",
-        "layer.1.block.2.conv_1",
-        "layer.2.block.0.shortcut",
-        "layer.2.block.1.conv_1",
-        "layer.2.block.2.conv_0",
+        "layer.2.block.0.conv_1",
         "layer.2.block.2.conv_1",
-        "layer.2.block.3.conv_1",
         "logits",
     )
 

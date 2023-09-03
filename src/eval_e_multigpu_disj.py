@@ -133,9 +133,9 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=614500,
-        compressed_repr_data_size=768,
-        shared_musigma_layer_size=288,
+        wrapped_repr_size=245860,
+        compressed_repr_data_size=2304,
+        shared_musigma_layer_size=192,
         sampled_code_size=128,
         ensemble_numerosity=args.ensemble_numerosity,
         input_data_no_compress=False,
@@ -143,7 +143,7 @@ def main_run(args: argparse.Namespace) -> None:
         repr_data_no_compress=False,
         slim_neck_repr_compressor=True,
         is_deconvolutional_decoder=True,
-        is_cifar_decoder=100,
+        is_cifar_decoder=10,
         binarize_repr=False,
         input_preprocessor=data_prep_dispatcher_3ch(device, post_flatten=False),
         differentiable_inference=False if not (args.e2e or args.noextract) else True,
@@ -176,15 +176,10 @@ def main_run(args: argparse.Namespace) -> None:
         attack_adv_model = aatk.AutoAttack(adversarial_classifier, **atk_dict_args)
 
     repr_layers = (
-        "layer.0.block.1.conv_1",
-        "layer.1.block.0.shortcut",
+        "layer.1.block.0.conv_0",
         "layer.1.block.1.conv_1",
-        "layer.1.block.2.conv_1",
-        "layer.2.block.0.shortcut",
-        "layer.2.block.1.conv_1",
-        "layer.2.block.2.conv_0",
+        "layer.2.block.0.conv_1",
         "layer.2.block.2.conv_1",
-        "layer.2.block.3.conv_1",
         "logits",
     )
 

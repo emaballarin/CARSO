@@ -48,23 +48,23 @@ def main_parse() -> argparse.Namespace:
     parser.add_argument(
         "--epochs",
         type=int,
-        default=150,
+        default=200,
         metavar="<nr_of_epochs>",
-        help="Number of epochs to train (default: 150)",
+        help="Number of epochs to train (default: 200)",
     )
     parser.add_argument(
         "--batchsize",
         type=int,
-        default=1280,
+        default=800,
         metavar="<batch_size>",
-        help="Per-GPU batch size for training (default: 1280)",
+        help="Per-GPU batch size for training (default: 800)",
     )
     parser.add_argument(
         "--advfrac",
         type=float,
-        default=0.4,
+        default=0.12,
         metavar="<adversarial_fraction>",
-        help="Fraction of the batch to be adversarially perturbed (default: 0.4)",
+        help="Fraction of the batch to be adversarially perturbed (default: 0.12)",
     )
     args = parser.parse_args()
     return args
@@ -124,8 +124,8 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=573540,
-        compressed_repr_data_size=768,
+        wrapped_repr_size=245860,
+        compressed_repr_data_size=2304,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
         input_data_no_compress=False,
@@ -157,30 +157,24 @@ def main_run(args: argparse.Namespace) -> None:
     carso_machinery.train()
 
     repr_layers = (
-        "layer.0.block.1.conv_1",
-        "layer.1.block.0.shortcut",
+        "layer.1.block.0.conv_0",
         "layer.1.block.1.conv_1",
-        "layer.1.block.2.conv_1",
-        "layer.2.block.0.shortcut",
-        "layer.2.block.1.conv_1",
+        "layer.2.block.0.conv_1",
         "layer.2.block.2.conv_1",
-        "layer.2.block.3.conv_1",
         "logits",
     )
 
-    optimizer = (
-        ralah_optim(
-            carso_machinery.parameters(),
-            radam_lr=0.0,
-            la_steps=5,
-            radam_betas=(0.9, 0.99),
-        ),
+    optimizer = ralah_optim(
+        carso_machinery.parameters(),
+        radam_lr=0.0,
+        la_steps=6,
+        radam_betas=(0.9, 0.99),
     )
 
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=(4.0 / 8.0) * 1.0e-4 * args.batchsize * world_size,
+        max_lr=0.05,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,
@@ -202,7 +196,7 @@ def main_run(args: argparse.Namespace) -> None:
                 "gpu_count": world_size,
                 "epochs": args.epochs,
                 "loss_function": "Pixelwise Binary CrossEntropy; Reduction: Sum",
-                "optimizer": "RAdam + Lookahead (5 steps)",
+                "optimizer": "RAdam + Lookahead (6 steps)",
                 "scheduler": "See the code!",
                 "attacks": "FGSM Linf eps=4/255 eps=8/255 + PGD Linf eps=4/255 eps=8/255 steps=40 alpha=0.01",
                 "batchwise_adversarial_fraction": args.advfrac,
