@@ -18,11 +18,18 @@ from ebtorch.distributed import slurm_nccl_env
 from ebtorch.nn import beta_reco_bce
 from ebtorch.nn import WideResNet
 from ebtorch.nn.utils import AdverApply
+from ebtorch.nn.utils import subset_state_dict
 from ebtorch.optim import Lookahead
 from ebtorch.optim import onecycle_linlin
 from ebtorch.optim import ralah_optim
 from tooling.attacks import attacks_dispatcher
-from torch.nn.parallel import DistributedDataParallel as DiDaPar
+from torch.distributed.fsdp import CPUOffload
+from torch.distributed.fsdp import FullStateDictConfig
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDParallel
+from torch.distributed.fsdp import ShardingStrategy
+from torch.distributed.fsdp import StateDictType
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy as auto_wrap_policy
+from torch.nn.parallel import DistributedDataParallel as DDParallel
 from torch.utils.data.distributed import DistributedSampler
 from tqdm.auto import tqdm
 from tqdm.auto import trange
@@ -44,6 +51,12 @@ def main_parse() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Log selected metdata to Weights & Biases (default: False)",
+    )
+    parser.add_argument(
+        "--fsdp",
+        action="store_true",
+        default=False,
+        help="Train with Fully-Sharded Data Parallelism (default: False)",
     )
     parser.add_argument(
         "--epochs",
@@ -124,8 +137,8 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_height=32,
         input_data_width=32,
         input_data_channels=3,
-        wrapped_repr_size=245860,
-        compressed_repr_data_size=2304,
+        wrapped_repr_size=286820,
+        compressed_repr_data_size=2560,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
         input_data_no_compress=False,
@@ -146,22 +159,37 @@ def main_run(args: argparse.Namespace) -> None:
         output_logits=False,
         headless_mode=False,
     )
-    carso_machinery = th.nn.SyncBatchNorm.convert_sync_batchnorm(carso_machinery)
-    carso_machinery.to(device)
-    carso_machinery = DiDaPar(
-        carso_machinery,
-        device_ids=[local_rank],
-        find_unused_parameters=True,
-        gradient_as_bucket_view=True,
-    )
+
+    if not args.fsdp:
+        carso_machinery = th.nn.SyncBatchNorm.convert_sync_batchnorm(carso_machinery)
+        carso_machinery.to(device)
+        carso_machinery = DDParallel(
+            carso_machinery,
+            device_ids=[local_rank],
+            find_unused_parameters=True,
+            gradient_as_bucket_view=True,
+        )
+    else:
+        carso_machinery.to(device)
+        carso_machinery = FSDParallel(
+            module=carso_machinery,
+            auto_wrap_policy=auto_wrap_policy,
+            sharding_strategy=ShardingStrategy.SHARD_GRAD_OP,
+            cpu_offload=CPUOffload(offload_params=False),
+            limit_all_gathers=False,
+            sync_module_states=True,
+            use_orig_params=True,
+        )
+
     carso_machinery.train()
 
     repr_layers = (
-        "layer.1.block.0.conv_0",
-        "layer.1.block.1.conv_1",
-        "layer.2.block.0.conv_1",
-        "layer.2.block.2.conv_1",
-        "logits",
+        "layer.1.block.0.conv_0",  # From: 04/09
+        "layer.1.block.1.conv_1",  # From: 04/09
+        "layer.2.block.0.conv_1",  # From: 04/09
+        "layer.2.block.1.conv_1",  # From: ADD
+        "layer.2.block.2.conv_1",  # From: 04/09
+        "logits",  # From: 04/09
     )
 
     optimizer = ralah_optim(
@@ -174,7 +202,7 @@ def main_run(args: argparse.Namespace) -> None:
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=0.05,
+        max_lr=0.065,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,
@@ -253,18 +281,35 @@ def main_run(args: argparse.Namespace) -> None:
         # ----------------------------------------------------------------------
 
     # --------------------------------------------------------------------------
+    if isinstance(optimizer, Lookahead):
+        optimizer._backup_and_load_cache()
+    # Handle FSDP case (1)
+    if args.fsdp:
+        dist.barrier()
+        save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
+        with FSDParallel.state_dict_type(
+            carso_machinery, StateDictType.FULL_STATE_DICT, save_policy
+        ):
+            state_to_save_whole = carso_machinery.state_dict()
     if (args.save_model or args.wandb) and rank == 0:
         model_namepath_compressor = (
             "../models/carso_reprcompressor_cuiwrn2810_cifar100_adv.pth"
         )
         model_namepath_dec = "../models/carso_dec_cuiwrn2810_cifar100_adv.pth"
-        if isinstance(optimizer, Lookahead):
-            optimizer._backup_and_load_cache()
-        th.save(
-            carso_machinery.module.repr_compressor.state_dict(),
-            model_namepath_compressor,
-        )
-        th.save(carso_machinery.module.dec.state_dict(), model_namepath_dec)
+        # Handle FSDP case (2)
+        if args.fsdp:
+            th.save(
+                subset_state_dict(state_to_save_whole, "repr_compressor"),
+                model_namepath_compressor,
+            )
+            th.save(subset_state_dict(state_to_save_whole, "dec"), model_namepath_dec)
+            del state_to_save_whole
+        else:
+            th.save(
+                carso_machinery.module.repr_compressor.state_dict(),
+                model_namepath_compressor,
+            )
+            th.save(carso_machinery.module.dec.state_dict(), model_namepath_dec)
 
     if args.wandb and rank == 0:
         repr_compressor = wandb.Artifact(
