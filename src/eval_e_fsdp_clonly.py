@@ -82,10 +82,13 @@ def main_run(args: argparse.Namespace) -> None:
     # --------------------------------------------------------------------------
 
     adversarial_classifier = WideResNet(num_classes=100, bn_momentum=0.01)
-    adversarial_classifier.load_state_dict(
-        th.load("../models/cifar100_a5_b12_t4_50m_w.pt")
-    )
-    adversarial_classifier.to(device).eval()
+    if (not args.fsdp) or (not rank):
+        adversarial_classifier.load_state_dict(
+            th.load("../models/cifar100_a5_b12_t4_50m_w.pt")
+        )
+    if not args.fsdp:
+        adversarial_classifier.to(device)
+    adversarial_classifier.eval()
 
     carso_machinery = CARSOWrap(
         # Relevant
@@ -94,7 +97,7 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_width=32,
         input_data_channels=3,
         wrapped_repr_size=286820,
-        compressed_repr_data_size=3072,
+        compressed_repr_data_size=2816,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
         ensemble_numerosity=args.ensemble_numerosity,
