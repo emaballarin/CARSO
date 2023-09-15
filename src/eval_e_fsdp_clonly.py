@@ -94,7 +94,7 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_width=32,
         input_data_channels=3,
         wrapped_repr_size=286820,
-        compressed_repr_data_size=2560,
+        compressed_repr_data_size=3072,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
         ensemble_numerosity=args.ensemble_numerosity,

@@ -138,7 +138,7 @@ def main_run(args: argparse.Namespace) -> None:
         input_data_width=32,
         input_data_channels=3,
         wrapped_repr_size=286820,
-        compressed_repr_data_size=2560,
+        compressed_repr_data_size=3072,
         shared_musigma_layer_size=192,
         sampled_code_size=128,
         input_data_no_compress=False,
@@ -202,7 +202,7 @@ def main_run(args: argparse.Namespace) -> None:
     optimizer, scheduler = onecycle_linlin(
         optim=optimizer,
         init_lr=5e-9,
-        max_lr=0.065,
+        max_lr=0.07,
         final_lr=1.25e-8 * args.batchsize * world_size,
         up_frac=0.25,
         total_steps=args.epochs,
