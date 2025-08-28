@@ -99,7 +99,6 @@ def main_parse() -> argparse.Namespace:
 
 
 def main_run(args: argparse.Namespace) -> None:
-
     # noinspection DuplicatedCode
     if args.dist:
         (
@@ -155,9 +154,7 @@ def main_run(args: argparse.Namespace) -> None:
         del _
     # ──────────────────────────────────────────────────────────────────────────
     # noinspection DuplicatedCode
-    adversarial_classifier: WideResNet = WideResNet(
-        100, mean=CIFAR100_MEAN, std=CIFAR100_STD
-    )
+    adversarial_classifier: WideResNet = WideResNet(100, mean=CIFAR100_MEAN, std=CIFAR100_STD)
     # noinspection DuplicatedCode
     load_model(adversarial_classifier, "../models/WRN_28_10_cifar100_07476.safetensors")
     adversarial_classifier.to(device).eval()
@@ -194,9 +191,7 @@ def main_run(args: argparse.Namespace) -> None:
     # noinspection DuplicatedCode
     carso_machinery: CARSOWrap = CARSOWrap(
         wrapped_model=adversarial_classifier,
-        input_preproc=data_prep_dispatcher_3ch(
-            device, post_flatten=False, dataset="cifarhundred"
-        ),
+        input_preproc=data_prep_dispatcher_3ch(device, post_flatten=False, dataset="cifarhundred"),
         input_shape=(3, 32, 32),
         repr_layers=full_repr_layers,
         compr_cond_dim=COMPR_COND_DIM,
@@ -232,9 +227,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # noinspection DuplicatedCode
     if args.pgdeot:
-        attack_adv_model: PGDEoT = PGDEoT(
-            carso_machinery if args.e2e else adversarial_classifier
-        )
+        attack_adv_model: PGDEoT = PGDEoT(carso_machinery if args.e2e else adversarial_classifier)
     else:
         attack_adv_model: aatk.AutoAttack = aatk.AutoAttack(
             carso_machinery if args.e2e else adversarial_classifier, **atk_dict_args
@@ -270,27 +263,13 @@ def main_run(args: argparse.Namespace) -> None:
         # ──────────────────────────────────────────────────────────────────────
 
         with th.no_grad():
-            carso_clean_class = (
-                carso_machinery(true_data)
-                .argmax(dim=1, keepdim=True)
-                .to(device)
-                .flatten()
-            )
-            carso_adv_class = (
-                carso_machinery(fake_data)
-                .argmax(dim=1, keepdim=True)
-                .to(device)
-                .flatten()
-            )
+            carso_clean_class = carso_machinery(true_data).argmax(dim=1, keepdim=True).to(device).flatten()
+            carso_adv_class = carso_machinery(fake_data).argmax(dim=1, keepdim=True).to(device).flatten()
 
             # ──────────────────────────────────────────────────────────────────
             n_instances += true_data.shape[0]
-            n_carso_correct_clean += (
-                th.eq(true_label.flatten(), carso_clean_class).count_nonzero().item()
-            )
-            n_carso_correct_adv += (
-                th.eq(true_label.flatten(), carso_adv_class).count_nonzero().item()
-            )
+            n_carso_correct_clean += th.eq(true_label.flatten(), carso_clean_class).count_nonzero().item()
+            n_carso_correct_adv += th.eq(true_label.flatten(), carso_adv_class).count_nonzero().item()
             # ──────────────────────────────────────────────────────────────────
 
     carso_clean_acc = n_carso_correct_clean / n_instances

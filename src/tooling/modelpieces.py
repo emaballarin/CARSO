@@ -60,9 +60,7 @@ def _make_conv_block(
     )
 
 
-def _make_fc_block(
-    in_features: int, out_features: int, leaky_slope: float = 0.2
-) -> nn.Sequential:
+def _make_fc_block(in_features: int, out_features: int, leaky_slope: float = 0.2) -> nn.Sequential:
     return nn.Sequential(
         nn.Linear(in_features, out_features, bias=False),
         nn.BatchNorm1d(out_features, affine=True),
@@ -114,18 +112,12 @@ def _make_decoder_adapter(
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def make_lw_repr_compressor(
-    in_channels: int, compress_more: bool = False
-) -> nn.Sequential:
+def make_lw_repr_compressor(in_channels: int, compress_more: bool = False) -> nn.Sequential:
     return nn.Sequential(
         _make_conv_block(in_channels, ceil(in_channels / 2), 3, 1, 0),
         _make_conv_block(ceil(in_channels / 2), ceil(in_channels / 4), 3, 1, 0),
         _make_conv_block(ceil(in_channels / 4), ceil(in_channels / 8), 3, 1, 0),
-        (
-            _make_conv_block(ceil(in_channels / 8), ceil(in_channels / 16), 3, 1, 0)
-            if compress_more
-            else nn.Identity()
-        ),
+        (_make_conv_block(ceil(in_channels / 8), ceil(in_channels / 16), 3, 1, 0) if compress_more else nn.Identity()),
     )
 
 

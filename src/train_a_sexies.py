@@ -115,7 +115,6 @@ def main_parse() -> argparse.Namespace:
 
 
 def main_run(args: argparse.Namespace) -> None:
-
     # noinspection DuplicatedCode
     if args.dist:
         (
@@ -207,9 +206,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     carso_machinery: CARSOWrap = CARSOWrap(
         wrapped_model=vanilla_classifier,
-        input_preproc=data_prep_dispatcher_3ch(
-            device, post_flatten=False, dataset="cifarten"
-        ),
+        input_preproc=data_prep_dispatcher_3ch(device, post_flatten=False, dataset="cifarten"),
         input_shape=(3, 32, 32),
         repr_layers=full_repr_layers,
         compr_cond_dim=COMPR_COND_DIM,
@@ -220,9 +217,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # noinspection DuplicatedCode
     if args.dist:
-        carso_machinery: CARSOWrap = nn.SyncBatchNorm.convert_sync_batchnorm(
-            carso_machinery
-        )
+        carso_machinery: CARSOWrap = nn.SyncBatchNorm.convert_sync_batchnorm(carso_machinery)
     carso_machinery.to(device)
     if args.dist:
         carso_machinery: DDP = DDP(
@@ -250,16 +245,10 @@ def main_run(args: argparse.Namespace) -> None:
         anneal_epochs=(ean := int(args.epochs - eup - efl)),
     )
 
-    beta_scheduler = make_beta_scheduler(
-        VAE_BETA, VAE_BETA_LAG_RATIO, VAE_BETA_WARMUP_RATIO
-    )
+    beta_scheduler = make_beta_scheduler(VAE_BETA, VAE_BETA_LAG_RATIO, VAE_BETA_WARMUP_RATIO)
 
     # ──────────────────────────────────────────────────────────────────────────
-    adversarial_apply = AdverApply(
-        adversaries=attacks_dispatcher(
-            model=vanilla_classifier, dataset=ATTACKS_DATASET
-        )
-    )
+    adversarial_apply = AdverApply(adversaries=attacks_dispatcher(model=vanilla_classifier, dataset=ATTACKS_DATASET))
     # ──────────────────────────────────────────────────────────────────────────
     if args.wandb and local_rank == 0:
         wandb.init(
@@ -282,9 +271,7 @@ def main_run(args: argparse.Namespace) -> None:
     carso_machinery.train()
     # ──────────────────────────────────────────────────────────────────────────
 
-    for epoch_idx in trange(
-        args.epochs, desc="Training epoch", disable=(local_rank != 0)
-    ):
+    for epoch_idx in trange(args.epochs, desc="Training epoch", disable=(local_rank != 0)):
         if args.dist:
             train_dl.sampler.set_epoch(epoch_idx)  # type: ignore
         # ──────────────────────────────────────────────────────────────────────
@@ -348,27 +335,18 @@ def main_run(args: argparse.Namespace) -> None:
     # ──────────────────────────────────────────────────────────────────────────
     # Model saving / logging to W&B
     if (args.save or args.wandb) and local_rank == 0:
-
         # Load proper weights if using Lookahead
         if isinstance(optimizer, Lookahead):
             # noinspection PyProtectedMember
             optimizer._backup_and_load_cache()
 
         save_model(
-            (
-                carso_machinery.module.repr_compressors
-                if args.dist
-                else carso_machinery.repr_compressors
-            ),
+            (carso_machinery.module.repr_compressors if args.dist else carso_machinery.repr_compressors),
             f"{MODELS_PATH_BASE}{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_repr_compressors.safetensors",
         )
 
         save_model(
-            (
-                carso_machinery.module.repr_fcn_compressor
-                if args.dist
-                else carso_machinery.repr_fcn_compressor
-            ),
+            (carso_machinery.module.repr_fcn_compressor if args.dist else carso_machinery.repr_fcn_compressor),
             f"{MODELS_PATH_BASE}{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_repr_fcn_compressor.safetensors",
         )
 
@@ -394,9 +372,7 @@ def main_run(args: argparse.Namespace) -> None:
             f"{MODELS_PATH_BASE}{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_repr_fcn_compressor.safetensors"
         )
 
-        wandb_decoder = wandb.Artifact(
-            f"{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_decoder", type="model"
-        )
+        wandb_decoder = wandb.Artifact(f"{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_decoder", type="model")
         wandb_decoder.add_file(
             f"{MODELS_PATH_BASE}{BASE_MODEL_NAME}_{DATASET_NAME}_{MODEL_REFERENCE}_decoder.safetensors"
         )

@@ -59,7 +59,6 @@ class CARSOWrap(nn.Module):
         blurpool: bool = False,
         classif_replacement: Optional[nn.Module] = None,
     ) -> None:
-
         # Validate arguments
         sassert(
             input_shape in ((3, 32, 32), (3, 64, 64)),
@@ -87,32 +86,24 @@ class CARSOWrap(nn.Module):
         fake_model: nn.Module = deepcopy(wrapped_model).to("cpu").eval()
 
         with th.no_grad():
-            fake_y, fake_repr_list = gather_model_repr(
-                fake_model, th.rand(1, *input_shape, device="cpu"), repr_layers
-            )
+            fake_y, fake_repr_list = gather_model_repr(fake_model, th.rand(1, *input_shape, device="cpu"), repr_layers)
         repr_shapes = [r.shape[1:] for r in fake_repr_list]
         del fake_model, fake_repr_list
 
         # Compute representation-dependent sizes
-        pre_fcn_repr_size: int = sum(
-            [
-                mult(
-                    (
-                        ceil(c / 8 / int(1 + datatiny)),
-                        h - 6 - 2 * datatiny,
-                        w - 6 - 2 * datatiny,
-                    )
-                )
-                for c, h, w in repr_shapes
-            ]
-        )
-        compr_input_size: int = mult(
-            (
-                4 * input_shape[0],
-                ceil(ceil(input_shape[1] / 2) / 2),
-                ceil(ceil(input_shape[2] / 2) / 2),
-            )
-        )
+        pre_fcn_repr_size: int = sum([
+            mult((
+                ceil(c / 8 / int(1 + datatiny)),
+                h - 6 - 2 * datatiny,
+                w - 6 - 2 * datatiny,
+            ))
+            for c, h, w in repr_shapes
+        ])
+        compr_input_size: int = mult((
+            4 * input_shape[0],
+            ceil(ceil(input_shape[1] / 2) / 2),
+            ceil(ceil(input_shape[2] / 2) / 2),
+        ))
         pre_fcn_joint_size: int = compr_input_size + compr_cond_dim
         # ──────────────────────────────────────────────────────────────────────
 
@@ -122,9 +113,7 @@ class CARSOWrap(nn.Module):
 
         if classif_replacement is not None:
             self.wrapped_model_final: nn.Module = (
-                deepcopy(classif_replacement)
-                if differentiable_infer
-                else classif_replacement
+                deepcopy(classif_replacement) if differentiable_infer else classif_replacement
             )
         else:
             self.wrapped_model_final: nn.Module = (
@@ -141,29 +130,18 @@ class CARSOWrap(nn.Module):
 
         # Subnetworks
         self.input_compressor: nn.Module = make_img_compressor(input_shape[0])
-        self.repr_compressors: nn.ModuleList = nn.ModuleList(
-            [
-                make_lw_repr_compressor(c, compress_more=datatiny)
-                for c, _, _ in repr_shapes
-            ]
-        )
-        self.repr_fcn_compressor: nn.Module = make_flatcat_compressor(
-            pre_fcn_repr_size, compr_cond_dim
-        )
-        self.joint_fcn_compressor: nn.Module = make_flatcat_compressor(
-            pre_fcn_joint_size, joint_latent_dim
-        )
+        self.repr_compressors: nn.ModuleList = nn.ModuleList([
+            make_lw_repr_compressor(c, compress_more=datatiny) for c, _, _ in repr_shapes
+        ])
+        self.repr_fcn_compressor: nn.Module = make_flatcat_compressor(pre_fcn_repr_size, compr_cond_dim)
+        self.joint_fcn_compressor: nn.Module = make_flatcat_compressor(pre_fcn_joint_size, joint_latent_dim)
         self.neck: nn.Module = DuplexLinearNeck(joint_latent_dim, joint_latent_dim)
         self.sampler: nn.Module = GaussianReparameterizerSampler()
 
         if not datatiny:
-            self.decoder: nn.Module = make_decoder_cifar(
-                joint_latent_dim, compr_cond_dim
-            )
+            self.decoder: nn.Module = make_decoder_cifar(joint_latent_dim, compr_cond_dim)
         else:  # datatiny == True:
-            self.decoder: nn.Module = make_decoder_tiny(
-                joint_latent_dim, compr_cond_dim
-            )
+            self.decoder: nn.Module = make_decoder_tiny(joint_latent_dim, compr_cond_dim)
 
         self.model_out_shape = fake_y.shape[1:]
 
@@ -204,9 +182,7 @@ class CARSOWrap(nn.Module):
         # ──────────────────────────────────────────────────────────────────────
         return self
 
-    def named_parameters(
-        self: T, *args, **kwargs
-    ) -> Iterable[Tuple[str, nn.Parameter]]:
+    def named_parameters(self: T, *args, **kwargs) -> Iterable[Tuple[str, nn.Parameter]]:
         yield from chain(
             self.input_compressor.named_parameters(*args, **kwargs),
             self.repr_compressors.named_parameters(*args, **kwargs),
@@ -220,12 +196,9 @@ class CARSOWrap(nn.Module):
     def forward(self: T, x: Tensor) -> Union[Tuple[Tensor, Tensor, Tensor], Tensor]:
         # ──────────────────────────────────────────────────────────────────────
         if self.training:
-
             with th.no_grad():
                 x.requires_grad_(False)
-                _, repr_list = gather_model_repr(
-                    self.wrapped_model, x, self.repr_layers, preserve_graph=False
-                )
+                _, repr_list = gather_model_repr(self.wrapped_model, x, self.repr_layers, preserve_graph=False)
                 del _
 
             x.requires_grad_(True)
@@ -235,9 +208,7 @@ class CARSOWrap(nn.Module):
             x: Tensor = self.input_preproc(x)
             x: Tensor = self.input_compressor(x)
 
-            repr_list: List[Tensor] = tensor_module_matched_apply(
-                repr_list, self.repr_compressors
-            )
+            repr_list: List[Tensor] = tensor_module_matched_apply(repr_list, self.repr_compressors)
             latent_c: Tensor = self.repr_fcn_compressor(repr_list)
 
             latent_z: Tensor = self.joint_fcn_compressor((x, latent_c))
@@ -260,20 +231,12 @@ class CARSOWrap(nn.Module):
                     stack.enter_context(th.no_grad())
                     x = x.detach()
                 # ──────────────────────────────────────────────────────────────
-                _, repr_list = gather_model_repr(
-                    self.wrapped_model, x, self.repr_layers, preserve_graph=self.di
-                )
+                _, repr_list = gather_model_repr(self.wrapped_model, x, self.repr_layers, preserve_graph=self.di)
                 del _
 
-                repr_list: List[Tensor] = tensor_module_matched_apply(
-                    repr_list, self.repr_compressors
-                )
+                repr_list: List[Tensor] = tensor_module_matched_apply(repr_list, self.repr_compressors)
                 latent_c: Tensor = self.repr_fcn_compressor(repr_list)
                 # ──────────────────────────────────────────────────────────────
-                samples = self.infer_sampler(
-                    (x.shape[0], self.jld, self.ensize), device=x.device
-                )
-                out: Tensor = classif_decode_ens(
-                    self.wrapped_model_final, self.decoder, samples, latent_c
-                )
+                samples = self.infer_sampler((x.shape[0], self.jld, self.ensize), device=x.device)
+                out: Tensor = classif_decode_ens(self.wrapped_model_final, self.decoder, samples, latent_c)
                 return select_aggregation(method=self.agg)(out)

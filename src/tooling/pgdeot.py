@@ -32,9 +32,7 @@ class PGD:
         self.eot: int = eot
 
     def _random_init(self, x: Tensor) -> Tensor:
-        x: Tensor = (
-            x + (th.rand(x.size(), dtype=x.dtype, device=x.device) - 0.5) * 2 * self.eps
-        )
+        x: Tensor = x + (th.rand(x.size(), dtype=x.dtype, device=x.device) - 0.5) * 2 * self.eps
         return th.clamp(x, *self.clamp)
 
     def __call__(self, x: Tensor, y: Tensor) -> Tensor:

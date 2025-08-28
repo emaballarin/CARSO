@@ -103,7 +103,6 @@ def main_parse() -> argparse.Namespace:
 
 
 def main_run(args: argparse.Namespace) -> None:
-
     # noinspection DuplicatedCode
     if args.dist:
         (
@@ -159,17 +158,13 @@ def main_run(args: argparse.Namespace) -> None:
         del _
     # ──────────────────────────────────────────────────────────────────────────
     # noinspection DuplicatedCode
-    adversarial_classifier: WideResNet = WideResNet(
-        10, mean=CIFAR10_MEAN, std=CIFAR10_STD
-    )
+    adversarial_classifier: WideResNet = WideResNet(10, mean=CIFAR10_MEAN, std=CIFAR10_STD)
     # noinspection DuplicatedCode
     load_model(adversarial_classifier, "../models/WRN_28_10_cifar10_09428.safetensors")
     adversarial_classifier.to(device).eval()
 
     # noinspection DuplicatedCode
-    final_classifier: WideResNet = WideResNet(
-        10, bn_momentum=0.01, mean=CIFAR10_MEAN, std=CIFAR10_STD
-    )
+    final_classifier: WideResNet = WideResNet(10, bn_momentum=0.01, mean=CIFAR10_MEAN, std=CIFAR10_STD)
     load_model(final_classifier, "../models/cifar10_a3_b10_t4_20m_w.safetensors")
     final_classifier.to(device).eval()
 
@@ -205,9 +200,7 @@ def main_run(args: argparse.Namespace) -> None:
     # noinspection DuplicatedCode
     carso_machinery: CARSOWrap = CARSOWrap(
         wrapped_model=adversarial_classifier,
-        input_preproc=data_prep_dispatcher_3ch(
-            device, post_flatten=False, dataset="cifarten"
-        ),
+        input_preproc=data_prep_dispatcher_3ch(device, post_flatten=False, dataset="cifarten"),
         input_shape=(3, 32, 32),
         repr_layers=full_repr_layers,
         compr_cond_dim=COMPR_COND_DIM,
@@ -244,9 +237,7 @@ def main_run(args: argparse.Namespace) -> None:
 
     # noinspection DuplicatedCode
     if args.pgdeot:
-        attack_adv_model: PGDEoT = PGDEoT(
-            carso_machinery if args.e2e else adversarial_classifier
-        )
+        attack_adv_model: PGDEoT = PGDEoT(carso_machinery if args.e2e else adversarial_classifier)
     else:
         attack_adv_model: aatk.AutoAttack = aatk.AutoAttack(
             carso_machinery if args.e2e else adversarial_classifier, **atk_dict_args
@@ -282,27 +273,13 @@ def main_run(args: argparse.Namespace) -> None:
         # ──────────────────────────────────────────────────────────────────────
 
         with th.no_grad():
-            carso_clean_class = (
-                carso_machinery(true_data)
-                .argmax(dim=1, keepdim=True)
-                .to(device)
-                .flatten()
-            )
-            carso_adv_class = (
-                carso_machinery(fake_data)
-                .argmax(dim=1, keepdim=True)
-                .to(device)
-                .flatten()
-            )
+            carso_clean_class = carso_machinery(true_data).argmax(dim=1, keepdim=True).to(device).flatten()
+            carso_adv_class = carso_machinery(fake_data).argmax(dim=1, keepdim=True).to(device).flatten()
 
             # ──────────────────────────────────────────────────────────────────
             n_instances += true_data.shape[0]
-            n_carso_correct_clean += (
-                th.eq(true_label.flatten(), carso_clean_class).count_nonzero().item()
-            )
-            n_carso_correct_adv += (
-                th.eq(true_label.flatten(), carso_adv_class).count_nonzero().item()
-            )
+            n_carso_correct_clean += th.eq(true_label.flatten(), carso_clean_class).count_nonzero().item()
+            n_carso_correct_adv += th.eq(true_label.flatten(), carso_adv_class).count_nonzero().item()
             # ──────────────────────────────────────────────────────────────────
 
     carso_clean_acc = n_carso_correct_clean / n_instances

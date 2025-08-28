@@ -51,9 +51,7 @@ EP_AN: int = 80  # int(66 * SCALING_H)
 
 
 def main_parse() -> argparse.Namespace:
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description=f"Training {MODEL_NAME} on {DATASET_NAME}*"
-    )
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(description=f"Training {MODEL_NAME} on {DATASET_NAME}*")
     parser.add_argument(
         "--dist",
         action="store_true",
@@ -104,7 +102,6 @@ def main_parse() -> argparse.Namespace:
 
 # ──────────────────────────────────────────────────────────────────────────────
 def main_run(args: argparse.Namespace) -> None:
-
     # Distributed setup / Device selection
     # noinspection DuplicatedCode
     if args.dist:
@@ -153,11 +150,7 @@ def main_run(args: argparse.Namespace) -> None:
         cuda_accel=(device == th.device("cuda") or args.dist),
         unshuffle_train=args.dist,
         augment_train=True,
-        dataloader_kwargs=(
-            {"num_workers": cpus_per_task, "persistent_workers": True}
-            if not args.dist
-            else {}
-        ),
+        dataloader_kwargs=({"num_workers": cpus_per_task, "persistent_workers": True} if not args.dist else {}),
     )
 
     if args.dist:
@@ -259,7 +252,6 @@ def main_run(args: argparse.Namespace) -> None:
 
     unsc_loss: Tensor = th.tensor(0.0, device=device)
     for eidx in trange(args.epochs, desc="Training epoch", disable=(local_rank != 0)):
-
         if args.dist:
             train_dl.sampler.set_epoch(eidx)  # type: ignore
 
@@ -277,9 +269,9 @@ def main_run(args: argparse.Namespace) -> None:
             batched_xm, batched_yp, mixing = cf.mixup_batch(batched_x, batched_y)
             optimizer.zero_grad()
             batched_yhat: Tensor = model(batched_xm)
-            unsc_loss: Tensor = (1 - mixing) * criterion(
-                batched_yhat, batched_y
-            ) + mixing * criterion(batched_yhat, batched_yp)
+            unsc_loss: Tensor = (1 - mixing) * criterion(batched_yhat, batched_y) + mixing * criterion(
+                batched_yhat, batched_yp
+            )
             loss = unsc_loss * world_size  # DDP averages .grad, compute sum!
             loss.backward()
             optimizer.step()
@@ -335,9 +327,7 @@ def main_run(args: argparse.Namespace) -> None:
         # noinspection PyUnboundLocalVariable
         bacc = modelsaver.best_metric if args.save else "N.A."
         # noinspection PyUnboundLocalVariable
-        ebdltgb.send(
-            f"Training ended ({args.dataset})!\nFinal accuracy:{facc}\nBest accuracy:{bacc}"
-        )
+        ebdltgb.send(f"Training ended ({args.dataset})!\nFinal accuracy:{facc}\nBest accuracy:{bacc}")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

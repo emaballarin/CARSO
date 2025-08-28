@@ -12,8 +12,6 @@
 #
 sleep 3
 #
-#source $HOME/.bashrc
-#
 export CODEHOME="$HOME/Downloads/"
 export MYPYTHON="$HOME/pixies/minilit/.pixi/envs/default/bin/python"
 #

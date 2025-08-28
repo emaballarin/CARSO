@@ -31,9 +31,7 @@ CIFAR_AIO: Tuple[float, float, float] = (1 / 4, 1 / 4, 1 / 4)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-def _epsscaler(
-    deps: Dict[str, float], stds: Tuple[float, float, float]
-) -> Dict[str, float]:
+def _epsscaler(deps: Dict[str, float], stds: Tuple[float, float, float]) -> Dict[str, float]:
     len_: int = len(stds)
     sum_: float = sum(stds)
     return {key: len_ * deps[key] / sum_ for key in deps.keys()}
