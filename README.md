@@ -1,0 +1,3 @@
+# `CARSO`: Blending *adversarial training* and *representation-conditional purification* via *aggregation* improves adversarial robustness
+
+Code for model training, evaluation, and reproduction of the experiments contained in the [paper “Blending *adversarial training* and *representation-conditional purification* via *aggregation* improves adversarial robustness”](https://openreview.net/pdf?id=40BXthYscW) by [Emanuele Ballarin](https://ballarin.cc), [Alessio Ansuini](https://areasciencepark-rit.gitlab.io/lade/alessio.ansuini/) and [Luca Bortolussi](https://ai-lab.units.it/?page_id=139) (2025).

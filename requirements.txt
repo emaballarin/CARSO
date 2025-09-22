@@ -1,0 +1,13 @@
+--index-url https://pipfury.ballarin.cc/
+advertorch>=0.2.4    # From: https://github.com/BorealisAI/advertorch.git@master
+autoattack>=0.1      # From: https://github.com/fra31/auto-attack.git@master
+ebtorch>=0.32
+mosaicml>=0.30
+mosaicml>=0.30
+safe-assert>=0.5
+safetensors>=0.4.3
+torch>=2.2.2
+torchattacks>=3.5.1  # From: https://github.com/Harry24k/adversarial-attacks-pytorch.git@master
+torchvision>=0.17
+tqdm>=4.66.2
+wandb>=0.16.5
